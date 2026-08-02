@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="tr" class="h-full bg-slate-50">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dosya Durumu - LexAgent AI</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="h-full font-sans text-slate-800">
+
+<header class="bg-slate-900 text-white border-b border-slate-800">
+  <div class="max-w-2xl mx-auto px-4 h-16 flex items-center space-x-3">
+    <div class="bg-indigo-600 p-2 rounded-lg"><i class="fa-solid fa-scale-balanced text-xl"></i></div>
+    <div>
+      <h1 class="font-bold text-lg leading-tight">LexAgent AI</h1>
+      <p class="text-xs text-slate-400">Müvekkil Görünümü — salt okunur</p>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-2xl mx-auto p-4 sm:p-8 space-y-6">
+  <div id="loading" class="text-center py-16 text-slate-400">
+    <i class="fa-solid fa-spinner animate-spin text-2xl mb-3"></i>
+    <p>Yükleniyor...</p>
+  </div>
+
+  <div id="error-box" class="hidden bg-rose-50 border border-rose-200 text-rose-700 rounded-xl p-4 text-sm"></div>
+
+  <div id="content" class="hidden space-y-6">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-3">
+      <h2 id="dosya-title" class="text-xl font-bold"></h2>
+      <div id="dosya-meta" class="text-sm text-slate-500 grid sm:grid-cols-2 gap-1"></div>
+      <span id="durum-badge" class="inline-block text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-600"></span>
+      <div id="ozet-box" class="hidden bg-indigo-50/50 border border-indigo-100 rounded-xl p-4 text-sm mt-2">
+        <p class="font-bold text-indigo-900 mb-1"><i class="fa-solid fa-file-lines mr-1"></i>Son Durum Özeti</p>
+        <p id="ozet-text" class="whitespace-pre-wrap"></p>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+      <h3 class="font-bold mb-3">Belgeler</h3>
+      <div id="belge-list" class="space-y-2"></div>
+    </div>
+
+    <p class="text-xs text-slate-400 text-center">
+      Bu görünüm salt okunurdur; sorularınız için avukatınızla iletişime geçin.
+    </p>
+  </div>
+</main>
+
+<script>
+const DURUM_LABELS = {
+  acildi: "Açıldı",
+  bilirkisi_bekleniyor: "Bilirkişi Bekleniyor",
+  durusma_bekleniyor: "Duruşma Bekleniyor",
+  karar_cikti: "Karar Çıktı",
+  temyiz: "Temyiz",
+  kesinlesti: "Kesinleşti",
+};
+const BELGE_TUR_LABELS = { dilekce: "Dilekçe", karar: "Karar", delil: "Delil", arastirma: "Emsal Araştırma", diger: "Diğer" };
+
+function formatTarihTR(dateStr) {
+  if (!dateStr) return "-";
+  const [y, m, d] = dateStr.slice(0, 10).split("-");
+  return `${d}.${m}.${y}`;
+}
+
+(async () => {
+  const params = new URLSearchParams(location.search);
+  const token = params.get("token");
+  const loading = document.getElementById("loading");
+  const errorBox = document.getElementById("error-box");
+  if (!token) {
+    loading.classList.add("hidden");
+    errorBox.textContent = "Geçersiz bağlantı: token eksik.";
+    errorBox.classList.remove("hidden");
+    return;
+  }
+  try {
+    const res = await fetch(`/api/musteri/${encodeURIComponent(token)}`);
+    if (!res.ok) throw new Error(await res.text());
+    const dosya = await res.json();
+
+    document.getElementById("dosya-title").textContent =
+      dosya.muvekkil_adi + (dosya.karsi_taraf ? " vs. " + dosya.karsi_taraf : "");
+    document.getElementById("dosya-meta").innerHTML = `
+      <span><i class="fa-solid fa-gavel mr-1"></i>${dosya.mahkeme || "-"}</span>
+      <span><i class="fa-solid fa-hashtag mr-1"></i>${dosya.esas_no || "-"}</span>
+      <span><i class="fa-solid fa-scale-balanced mr-1"></i>${dosya.dava_turu || "-"}</span>
+      <span><i class="fa-solid fa-calendar mr-1"></i>${formatTarihTR(dosya.acilis_tarihi)}</span>
+    `;
+    document.getElementById("durum-badge").textContent = DURUM_LABELS[dosya.durum] || dosya.durum;
+    if (dosya.son_durum_ozeti) {
+      document.getElementById("ozet-text").textContent = dosya.son_durum_ozeti;
+      document.getElementById("ozet-box").classList.remove("hidden");
+    }
+    const belgeBox = document.getElementById("belge-list");
+    belgeBox.innerHTML = dosya.belgeler.length
+      ? dosya.belgeler
+          .map(
+            (b) => `
+      <div class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs">
+        <span><i class="fa-solid fa-file-lines text-indigo-600 mr-1"></i>${b.ad} <span class="text-slate-400">(${BELGE_TUR_LABELS[b.tur] || b.tur})</span></span>
+        <span class="text-slate-400">${formatTarihTR(b.created_at)}</span>
+      </div>`
+          )
+          .join("")
+      : '<p class="text-sm text-slate-400">Henüz belge yok.</p>';
+
+    loading.classList.add("hidden");
+    document.getElementById("content").classList.remove("hidden");
+  } catch (err) {
+    loading.classList.add("hidden");
+    errorBox.textContent = "Bu bağlantı geçersiz veya süresi dolmuş.";
+    errorBox.classList.remove("hidden");
+  }
+})();
+</script>
+</body>
+</html>

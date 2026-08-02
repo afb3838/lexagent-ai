@@ -152,6 +152,15 @@
             <p class="font-bold text-indigo-900 mb-1"><i class="fa-solid fa-file-lines mr-1"></i>Son Durum Özeti</p>
             <p id="dosya-ozet-text" class="whitespace-pre-wrap"></p>
           </div>
+          <div class="flex items-center gap-2 pt-1">
+            <button onclick="olusturPaylasimLinki()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-3 py-2 rounded-lg border border-slate-300">
+              <i class="fa-solid fa-share-nodes mr-1"></i>Müvekkil Paylaşım Linki
+            </button>
+          </div>
+          <div id="paylasim-link-box" class="hidden bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs flex items-center gap-2">
+            <input id="paylasim-link-input" readonly class="flex-1 bg-white border border-slate-300 rounded px-2 py-1.5 text-xs">
+            <button onclick="kopyalaPaylasimLinki()" class="text-slate-500 hover:text-indigo-600"><i class="fa-solid fa-copy"></i></button>
+          </div>
         </div>
 
         <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
@@ -488,6 +497,13 @@
         <i class="fa-solid fa-circle-info mt-0.5"></i>
         <span>İşleme konu belgelerinizi (dilekçe, tebligat, karar vb.) yükleyin — sistem içeriği otomatik olarak analiz edip aşağıdaki olay özetini oluşturacaktır.</span>
       </p>
+    </div>
+
+    <div>
+      <label class="block text-sm font-semibold mb-1">Dilekçe Şablonu (isteğe bağlı)</label>
+      <select id="sablon-sec" onchange="uygulaSablon()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+        <option value="">-- Hızlı başlangıç için bir şablon seçin --</option>
+      </select>
     </div>
 
     <div class="grid md:grid-cols-2 gap-4">

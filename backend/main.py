@@ -2,6 +2,7 @@ import os
 import io
 import html as html_lib
 import re
+import secrets
 import uuid
 import zipfile
 from typing import List, Optional
@@ -687,6 +688,35 @@ async def search_mevzuat(q: str = "", user: dict = Depends(get_current_user)):
     else:
         rows = await db.select("mevzuat", {}, order="kanun_adi.asc")
     return {"mevzuat": rows}
+
+
+@app.post("/api/dosyalar/{dosya_id}/paylasim-linki")
+async def create_paylasim_linki(dosya_id: str, user: dict = Depends(get_current_user)):
+    dosya = await get_owned_dosya(dosya_id, user["id"])
+    token = dosya.get("paylasim_token")
+    if not token:
+        token = secrets.token_urlsafe(24)
+        await db.patch("dosyalar", {"id": f"eq.{dosya_id}"}, {"paylasim_token": token})
+    return {"token": token}
+
+
+@app.get("/api/musteri/{token}")
+async def get_musteri_gorunumu(token: str):
+    dosya = await db.select_one("dosyalar", {"paylasim_token": f"eq.{token}"})
+    if not dosya:
+        raise HTTPException(404, "Gecersiz veya suresi dolmus link.")
+    belgeler = await db.select("belgeler", {"dosya_id": f"eq.{dosya['id']}"}, order="created_at.desc")
+    return {
+        "muvekkil_adi": dosya["muvekkil_adi"],
+        "karsi_taraf": dosya.get("karsi_taraf"),
+        "mahkeme": dosya.get("mahkeme"),
+        "esas_no": dosya.get("esas_no"),
+        "dava_turu": dosya.get("dava_turu"),
+        "durum": dosya.get("durum"),
+        "acilis_tarihi": dosya.get("acilis_tarihi"),
+        "son_durum_ozeti": dosya.get("son_durum_ozeti"),
+        "belgeler": [{"ad": b["ad"], "tur": b["tur"], "created_at": b["created_at"]} for b in belgeler],
+    }
 
 
 @app.get("/api/health")

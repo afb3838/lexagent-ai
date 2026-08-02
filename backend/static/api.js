@@ -211,4 +211,8 @@ const api = {
     const res = await authedFetch(`/api/mevzuat?q=${encodeURIComponent(q || "")}`);
     return (await res.json()).mevzuat;
   },
+  async createPaylasimLinki(dosyaId) {
+    const res = await authedFetch(`/api/dosyalar/${dosyaId}/paylasim-linki`, { method: "POST" });
+    return res.json();
+  },
 };

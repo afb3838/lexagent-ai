@@ -234,6 +234,7 @@ async function openDosyaPage(id) {
     document.getElementById("belge-upload-progress").innerHTML = "";
     document.getElementById("vekaletname-form").classList.add("hidden");
     document.getElementById("cari-hesap-form").classList.add("hidden");
+    document.getElementById("paylasim-link-box").classList.add("hidden");
   }
   await refreshDosyaInfo(id);
 }
@@ -284,6 +285,23 @@ async function updateDurum() {
   } catch (err) {
     showToast("Güncellenemedi: " + err.message);
   }
+}
+
+async function olusturPaylasimLinki() {
+  try {
+    const { token } = await api.createPaylasimLinki(currentDosyaId);
+    const link = `${location.origin}/musteri.html?token=${token}`;
+    document.getElementById("paylasim-link-input").value = link;
+    document.getElementById("paylasim-link-box").classList.remove("hidden");
+  } catch (err) {
+    showToast("Link oluşturulamadı: " + err.message);
+  }
+}
+
+function kopyalaPaylasimLinki() {
+  const input = document.getElementById("paylasim-link-input");
+  navigator.clipboard.writeText(input.value);
+  showToast("Link panoya kopyalandı.");
 }
 
 let currentBelgeler = [];
