@@ -295,7 +295,7 @@ async def upload_belge(
 
 @app.post("/api/research")
 async def research(
-    dosya_id: str = Form(...),
+    dosya_id: Optional[str] = Form(None),
     case_subject: str = Form(...),
     court_type: str = Form(...),
     party_role: str = Form(...),
@@ -303,7 +303,8 @@ async def research(
     instruction: str = Form(""),
     user: dict = Depends(get_current_user),
 ):
-    await get_owned_dosya(dosya_id, user["id"])
+    if dosya_id:
+        await get_owned_dosya(dosya_id, user["id"])
 
     user_prompt = f"""Mahkeme Turu: {court_type}
 Taraf Rolu: {party_role}
@@ -317,16 +318,17 @@ Bu uyusmazlikla dogrudan ilgili, gercek ve dogrulanabilir emsal kararlari ara ve
 Uygulanacak kanun maddelerini de belirt."""
 
     text, sources = await call_gemini(RESEARCH_SYSTEM, user_prompt, use_search=True)
-    await db.insert(
-        "belgeler",
-        {"dosya_id": dosya_id, "ad": "Emsal Arastirma Sonucu", "tur": "arastirma", "metin": text},
-    )
+    if dosya_id:
+        await db.insert(
+            "belgeler",
+            {"dosya_id": dosya_id, "ad": "Emsal Arastirma Sonucu", "tur": "arastirma", "metin": text},
+        )
     return {"result": text, "sources": sources}
 
 
 @app.post("/api/draft")
 async def draft(
-    dosya_id: str = Form(...),
+    dosya_id: Optional[str] = Form(None),
     case_subject: str = Form(...),
     court_type: str = Form(...),
     party_role: str = Form(...),
@@ -335,7 +337,8 @@ async def draft(
     precedents: str = Form(""),
     user: dict = Depends(get_current_user),
 ):
-    await get_owned_dosya(dosya_id, user["id"])
+    if dosya_id:
+        await get_owned_dosya(dosya_id, user["id"])
 
     user_prompt = f"""GOREVLI MAHKEME: {court_type}
 TARAF ROLU: {party_role}
@@ -351,11 +354,29 @@ BULUNAN EMSAL KARARLAR:
 Yukaridaki bilgilerle eksiksiz, resmi bir dilekce taslagi yaz."""
 
     text, _ = await call_gemini(DRAFT_SYSTEM, user_prompt, use_search=False)
-    await db.insert(
-        "belgeler",
-        {"dosya_id": dosya_id, "ad": "Dilekce Taslagi", "tur": "dilekce", "metin": text},
-    )
+    if dosya_id:
+        await db.insert(
+            "belgeler",
+            {"dosya_id": dosya_id, "ad": "Dilekce Taslagi", "tur": "dilekce", "metin": text},
+        )
     return {"petition": text}
+
+
+@app.post("/api/dosyalar/{dosya_id}/belge-ekle-metin")
+async def add_text_belge(
+    dosya_id: str,
+    ad: str = Form(...),
+    tur: str = Form("diger"),
+    metin: str = Form(...),
+    user: dict = Depends(get_current_user),
+):
+    dosya = await get_owned_dosya(dosya_id, user["id"])
+    belge = await db.insert(
+        "belgeler",
+        {"dosya_id": dosya_id, "ad": ad, "tur": tur, "metin": metin},
+    )
+    await update_son_durum_ozeti(dosya, ad, metin)
+    return belge
 
 
 @app.get("/api/health")

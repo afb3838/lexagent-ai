@@ -1,6 +1,3 @@
-let currentDosyaId = null;
-let lastResearchText = "";
-
 const DURUM_LABELS = {
   acildi: "Açıldı",
   bilirkisi_bekleniyor: "Bilirkişi Bekleniyor",
@@ -18,17 +15,19 @@ const BELGE_TUR_LABELS = {
   diger: "Diğer",
 };
 
+const PAGE_TITLES = {
+  dosyalar: "Dosyalarım",
+  "emsal-arastirma": "Emsal Araştırma",
+  ajanda: "Ajanda",
+  vekaletnameler: "Vekaletnameler",
+  "cari-hesap": "Cari Hesap",
+};
+
 function showToast(msg) {
   const t = document.getElementById("toast");
   t.textContent = msg;
   t.classList.remove("translate-y-20", "opacity-0");
   setTimeout(() => t.classList.add("translate-y-20", "opacity-0"), 3000);
-}
-
-function setView(name) {
-  ["login", "dashboard", "dosya"].forEach((v) => {
-    document.getElementById("view-" + v).classList.toggle("hidden", v !== name);
-  });
 }
 
 // ---------------------------------------------------------------------------
@@ -51,16 +50,20 @@ async function handleLogout() {
 }
 
 async function onSignedIn(session) {
+  document.getElementById("view-login").classList.add("hidden");
+  document.getElementById("app-shell").classList.remove("hidden");
+  document.getElementById("app-shell").classList.add("flex");
   document.getElementById("user-email").textContent = session.user.email;
   document.getElementById("user-email").classList.remove("hidden");
   document.getElementById("logout-btn").classList.remove("hidden");
-  await goToDashboard();
+  if (!location.hash) location.hash = "#/dosyalar";
+  else await router();
 }
 
 function onSignedOut() {
-  document.getElementById("user-email").classList.add("hidden");
-  document.getElementById("logout-btn").classList.add("hidden");
-  setView("login");
+  document.getElementById("app-shell").classList.add("hidden");
+  document.getElementById("app-shell").classList.remove("flex");
+  document.getElementById("view-login").classList.remove("hidden");
 }
 
 supabaseClient.auth.onAuthStateChange((_event, session) => {
@@ -69,11 +72,57 @@ supabaseClient.auth.onAuthStateChange((_event, session) => {
 });
 
 // ---------------------------------------------------------------------------
-// Dashboard
+// Router
 // ---------------------------------------------------------------------------
-async function goToDashboard() {
-  currentDosyaId = null;
-  setView("dashboard");
+function parseHash() {
+  const raw = location.hash.replace(/^#\/?/, "");
+  const segments = raw.split("/").filter(Boolean);
+  return { route: segments[0] || "dosyalar", param: segments[1] };
+}
+
+function showPage(pageId) {
+  document.querySelectorAll("#page-content .page").forEach((el) => el.classList.add("hidden"));
+  document.getElementById(pageId).classList.remove("hidden");
+}
+
+const NAV_BADGE_ROUTES = new Set(["ajanda", "vekaletnameler", "cari-hesap"]);
+
+function highlightNav(route) {
+  document.querySelectorAll("#sidebar-nav .nav-link").forEach((el) => {
+    const active = el.dataset.route === route;
+    const layout = NAV_BADGE_ROUTES.has(el.dataset.route) ? "flex items-center justify-between" : "flex items-center";
+    const color = active ? "bg-indigo-600 text-white font-semibold" : "text-slate-300 hover:bg-slate-800 hover:text-white";
+    el.className = `nav-link ${layout} px-3 py-2 rounded-lg ${color}`;
+  });
+}
+
+async function router() {
+  const { route, param } = parseHash();
+  document.getElementById("page-title").textContent = PAGE_TITLES[route] || "";
+  highlightNav(route);
+
+  if (route === "dosyalar" && param) {
+    showPage("page-dosya-detay");
+    await openDosyaPage(param);
+  } else if (route === "dosyalar") {
+    showPage("page-dosyalar");
+    await loadDosyaList();
+  } else if (route === "emsal-arastirma") {
+    showPage("page-emsal-arastirma");
+    mountWizard("wizard-mount-standalone", null);
+  } else if (["ajanda", "vekaletnameler", "cari-hesap"].includes(route)) {
+    showPage("page-" + route);
+  } else {
+    location.hash = "#/dosyalar";
+  }
+}
+
+window.addEventListener("hashchange", router);
+
+// ---------------------------------------------------------------------------
+// Dosyalar (dashboard)
+// ---------------------------------------------------------------------------
+async function loadDosyaList() {
   closeNewDosyaForm();
   try {
     const dosyalar = await api.listDosyalar();
@@ -92,7 +141,7 @@ function renderDosyaList(dosyalar) {
   box.innerHTML = dosyalar
     .map(
       (d) => `
-    <div onclick="openDosya('${d.id}')" class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex items-center justify-between cursor-pointer hover:border-indigo-400">
+    <div onclick="location.hash = '#/dosyalar/${d.id}'" class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex items-center justify-between cursor-pointer hover:border-indigo-400">
       <div>
         <p class="font-semibold">${d.muvekkil_adi}${d.karsi_taraf ? " vs. " + d.karsi_taraf : ""}</p>
         <p class="text-xs text-slate-500">${d.dava_turu || ""} ${d.esas_no ? "· Esas No: " + d.esas_no : ""}</p>
@@ -129,28 +178,34 @@ async function submitNewDosya() {
       dava_turu: document.getElementById("new-dava-turu").value.trim(),
       acilis_tarihi: document.getElementById("new-acilis-tarihi").value,
     });
-    await openDosya(dosya.id);
+    location.hash = "#/dosyalar/" + dosya.id;
   } catch (err) {
     showToast("Dosya oluşturulamadı: " + err.message);
   }
 }
 
 // ---------------------------------------------------------------------------
-// Dosya detail
+// Dosya detayi
 // ---------------------------------------------------------------------------
-async function openDosya(id) {
-  currentDosyaId = id;
+async function openDosyaPage(id) {
+  if (currentDosyaId !== id) {
+    mountWizard("wizard-mount-dosya", id);
+  }
+  await refreshDosyaInfo(id);
+}
+
+async function refreshDosyaInfo(id) {
   try {
     const dosya = await api.getDosya(id);
     renderDosya(dosya);
-    setView("dosya");
-    switchTab(1);
   } catch (err) {
     showToast("Dosya yüklenemedi: " + err.message);
   }
 }
 
 function renderDosya(dosya) {
+  document.getElementById("page-title").textContent =
+    dosya.muvekkil_adi + (dosya.karsi_taraf ? " vs. " + dosya.karsi_taraf : "");
   document.getElementById("dosya-title").textContent =
     dosya.muvekkil_adi + (dosya.karsi_taraf ? " vs. " + dosya.karsi_taraf : "");
   document.getElementById("dosya-durum").value = dosya.durum;
@@ -168,7 +223,9 @@ function renderDosya(dosya) {
     ozetBox.classList.add("hidden");
   }
   renderBelgeList(dosya.belgeler || []);
-  document.getElementById("caseSubject").value = dosya.dava_turu || "";
+  if (!document.getElementById("caseSubject").value) {
+    document.getElementById("caseSubject").value = dosya.dava_turu || "";
+  }
   synthesizeCaseDetails(dosya.belgeler || []);
 }
 
@@ -215,104 +272,12 @@ async function handleBelgeUpload(e) {
   showToast("Belgeler okunuyor...");
   try {
     await api.uploadBelgeler(currentDosyaId, files);
-    const dosya = await api.getDosya(currentDosyaId);
-    renderDosya(dosya);
+    await refreshDosyaInfo(currentDosyaId);
     showToast("Belgeler yüklendi.");
   } catch (err) {
     showToast("Belge yükleme hatası: " + err.message);
   }
   e.target.value = "";
-}
-
-// ---------------------------------------------------------------------------
-// Wizard: arastirma + dilekce
-// ---------------------------------------------------------------------------
-function switchTab(n) {
-  [1, 2, 3].forEach((i) => {
-    document.getElementById("tab-" + i).className =
-      i === n ? "py-2.5 rounded-lg bg-white shadow-sm text-indigo-700 font-semibold" : "py-2.5 rounded-lg text-slate-600";
-    document.getElementById("step-" + i).classList.toggle("hidden", i !== n);
-  });
-}
-
-async function startResearch() {
-  const caseSubject = document.getElementById("caseSubject").value.trim();
-  const caseDetails = document.getElementById("caseDetails").value.trim();
-  if (!caseSubject || !caseDetails) {
-    showToast("Lütfen dava konusu ve olay özetini doldurun.");
-    return;
-  }
-  switchTab(2);
-  document.getElementById("research-loading").classList.remove("hidden");
-  document.getElementById("research-results").classList.add("hidden");
-  document.getElementById("research-error").classList.add("hidden");
-
-  try {
-    const data = await api.research({
-      dosya_id: currentDosyaId,
-      case_subject: caseSubject,
-      court_type: document.getElementById("courtType").value,
-      party_role: document.getElementById("partyRole").value,
-      case_details: caseDetails,
-      instruction: document.getElementById("instruction").value,
-    });
-    lastResearchText = data.result;
-    document.getElementById("research-text").textContent = data.result;
-    const srcBox = document.getElementById("research-sources");
-    srcBox.innerHTML = data.sources.length
-      ? data.sources
-          .map(
-            (s) =>
-              `<a href="${s.uri}" target="_blank" class="text-xs bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 px-2.5 py-1 rounded-md border border-slate-200"><i class="fa-solid fa-link mr-1"></i>${s.title.substring(0, 40)}</a>`
-          )
-          .join("")
-      : '<span class="text-xs text-slate-400">Kaynak künyesi dönmedi.</span>';
-    document.getElementById("research-loading").classList.add("hidden");
-    document.getElementById("research-results").classList.remove("hidden");
-  } catch (err) {
-    document.getElementById("research-loading").classList.add("hidden");
-    const errBox = document.getElementById("research-error");
-    errBox.textContent = "Hata: " + err.message;
-    errBox.classList.remove("hidden");
-  }
-}
-
-async function goToDraft() {
-  switchTab(3);
-  document.getElementById("draft-loading").classList.remove("hidden");
-  document.getElementById("petition-canvas").classList.add("hidden");
-  document.getElementById("draft-error").classList.add("hidden");
-
-  try {
-    const data = await api.draft({
-      dosya_id: currentDosyaId,
-      case_subject: document.getElementById("caseSubject").value.trim(),
-      court_type: document.getElementById("courtType").value,
-      party_role: document.getElementById("partyRole").value,
-      case_details: document.getElementById("caseDetails").value.trim(),
-      instruction: document.getElementById("instruction").value,
-      precedents: lastResearchText,
-    });
-    const canvas = document.getElementById("petition-canvas");
-    canvas.textContent = data.petition;
-    document.getElementById("draft-loading").classList.add("hidden");
-    canvas.classList.remove("hidden");
-  } catch (err) {
-    document.getElementById("draft-loading").classList.add("hidden");
-    const errBox = document.getElementById("draft-error");
-    errBox.textContent = "Hata: " + err.message;
-    errBox.classList.remove("hidden");
-  }
-}
-
-function copyPetition() {
-  const text = document.getElementById("petition-canvas").textContent;
-  if (!text) {
-    showToast("Kopyalanacak metin yok.");
-    return;
-  }
-  navigator.clipboard.writeText(text);
-  showToast("Panoya kopyalandı.");
 }
 
 // ---------------------------------------------------------------------------
@@ -324,10 +289,10 @@ fetch("/api/health")
     const badge = document.getElementById("health-badge");
     if (d.api_key_configured) {
       badge.textContent = "Sunucu hazır (" + d.model + ")";
-      badge.className = "text-xs px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400";
+      badge.className = "text-xs px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-center";
     } else {
       badge.textContent = "GEMINI_API_KEY tanımlı değil";
-      badge.className = "text-xs px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-400";
+      badge.className = "text-xs px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-400 text-center";
     }
   })
   .catch(() => {});
