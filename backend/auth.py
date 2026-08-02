@@ -20,7 +20,7 @@ def _decode(token: str) -> dict:
             audience="authenticated",
         )
     if _jwks_client is None:
-        raise HTTPException(500, "Sunucuda SUPABASE_URL veya SUPABASE_JWT_SECRET tanimli degil.")
+        raise HTTPException(500, "Sunucuda SUPABASE_URL tanimli degil. Render Environment ayarlarindan ekleyin.")
     signing_key = _jwks_client.get_signing_key_from_jwt(token)
     return jwt.decode(
         token,
