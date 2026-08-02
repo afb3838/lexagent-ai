@@ -85,7 +85,7 @@ function showPage(pageId) {
   document.getElementById(pageId).classList.remove("hidden");
 }
 
-const NAV_BADGE_ROUTES = new Set(["ajanda", "vekaletnameler", "cari-hesap"]);
+const NAV_BADGE_ROUTES = new Set(["vekaletnameler", "cari-hesap"]);
 
 function highlightNav(route) {
   document.querySelectorAll("#sidebar-nav .nav-link").forEach((el) => {
@@ -110,7 +110,10 @@ async function router() {
   } else if (route === "emsal-arastirma") {
     showPage("page-emsal-arastirma");
     mountWizard("wizard-mount-standalone", null);
-  } else if (["ajanda", "vekaletnameler", "cari-hesap"].includes(route)) {
+  } else if (route === "ajanda") {
+    showPage("page-ajanda");
+    await loadAjandaPage();
+  } else if (["vekaletnameler", "cari-hesap"].includes(route)) {
     showPage("page-" + route);
   } else {
     location.hash = "#/dosyalar";
@@ -227,6 +230,7 @@ function renderDosya(dosya) {
     document.getElementById("caseSubject").value = dosya.dava_turu || "";
   }
   synthesizeCaseDetails(dosya.belgeler || []);
+  loadDosyaEtkinlikleri(dosya.id);
 }
 
 async function updateDurum() {

@@ -71,4 +71,20 @@ const api = {
     const res = await authedFetch("/api/draft", { method: "POST", body: toFormData(fields) });
     return res.json();
   },
+  async listEtkinlikler() {
+    const res = await authedFetch("/api/etkinlikler");
+    return (await res.json()).etkinlikler;
+  },
+  async listDosyaEtkinlikleri(dosyaId) {
+    const res = await authedFetch(`/api/dosyalar/${dosyaId}/etkinlikler`);
+    return (await res.json()).etkinlikler;
+  },
+  async createEtkinlik(fields) {
+    const res = await authedFetch("/api/etkinlikler", { method: "POST", body: toFormData(fields) });
+    return res.json();
+  },
+  async patchEtkinlik(id, fields) {
+    const res = await authedFetch(`/api/etkinlikler/${id}`, { method: "PATCH", body: toFormData(fields) });
+    return res.json();
+  },
 };

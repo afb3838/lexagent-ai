@@ -51,9 +51,8 @@
       <a href="#/emsal-arastirma" data-route="emsal-arastirma" class="nav-link flex items-center px-3 py-2 rounded-lg">
         <i class="fa-solid fa-magnifying-glass w-5"></i><span class="ml-2">Emsal Araştırma</span>
       </a>
-      <a href="#/ajanda" data-route="ajanda" class="nav-link flex items-center justify-between px-3 py-2 rounded-lg">
-        <span><i class="fa-solid fa-calendar-days w-5"></i><span class="ml-2">Ajanda</span></span>
-        <span class="text-[10px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded">Yakında</span>
+      <a href="#/ajanda" data-route="ajanda" class="nav-link flex items-center px-3 py-2 rounded-lg">
+        <i class="fa-solid fa-calendar-days w-5"></i><span class="ml-2">Ajanda</span>
       </a>
       <a href="#/vekaletnameler" data-route="vekaletnameler" class="nav-link flex items-center justify-between px-3 py-2 rounded-lg">
         <span><i class="fa-solid fa-file-signature w-5"></i><span class="ml-2">Vekaletnameler</span></span>
@@ -160,6 +159,17 @@
           <div id="belge-list" class="space-y-2"></div>
         </div>
 
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold">Ajanda</h3>
+            <button onclick="openNewEtkinlikForm(currentDosyaId)" class="bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold px-4 py-2 rounded-lg">
+              <i class="fa-solid fa-calendar-plus mr-1"></i>Ajandaya Ekle
+            </button>
+          </div>
+          <div id="dosya-etkinlik-form-mount"></div>
+          <div id="dosya-etkinlik-list" class="space-y-2"></div>
+        </div>
+
         <div id="wizard-mount-dosya"></div>
       </div>
 
@@ -172,15 +182,43 @@
         <div id="wizard-mount-standalone"></div>
       </div>
 
-      <!-- PAGE: Ajanda (placeholder) -->
-      <div id="page-ajanda" class="page hidden">
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-12 text-center space-y-3">
-          <i class="fa-solid fa-calendar-days text-3xl text-slate-300"></i>
-          <h3 class="font-bold text-lg">Ajanda / Takvim</h3>
-          <p class="text-sm text-slate-500 max-w-md mx-auto">
-            Duruşma tarihleri, tebliğ ve temyiz süreleri, hatırlatmalar burada yönetilecek.
-            Bu modül yakında ekleniyor.
-          </p>
+      <!-- PAGE: Ajanda -->
+      <div id="page-ajanda" class="page hidden space-y-6">
+        <div class="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 text-sm text-amber-900 flex items-start gap-2">
+          <i class="fa-solid fa-triangle-exclamation mt-0.5"></i>
+          <span><strong>Bu ajanda bir hatırlatma aracıdır.</strong> Süre ve zamanaşımı hesaplamalarını mutlaka kendiniz doğrulayın.</span>
+        </div>
+
+        <div class="flex items-center justify-end">
+          <button onclick="openNewEtkinlikForm()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-5 rounded-lg">
+            <i class="fa-solid fa-plus mr-1"></i> Yeni Etkinlik
+          </button>
+        </div>
+
+        <div id="etkinlik-form-mount-ajanda"></div>
+
+        <div class="grid lg:grid-cols-2 gap-6">
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+            <div class="flex items-center justify-between mb-4">
+              <button onclick="calendarPrevMonth()" class="text-slate-400 hover:text-indigo-600 px-2"><i class="fa-solid fa-chevron-left"></i></button>
+              <h3 id="calendar-month-label" class="font-bold"></h3>
+              <button onclick="calendarNextMonth()" class="text-slate-400 hover:text-indigo-600 px-2"><i class="fa-solid fa-chevron-right"></i></button>
+            </div>
+            <div class="grid grid-cols-7 gap-1 text-center text-xs text-slate-400 mb-1">
+              <span>Pzt</span><span>Sal</span><span>Çar</span><span>Per</span><span>Cum</span><span>Cmt</span><span>Paz</span>
+            </div>
+            <div id="calendar-grid" class="grid grid-cols-7 gap-1 text-center"></div>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+            <h3 id="selected-day-title" class="font-bold mb-3"></h3>
+            <div id="selected-day-events" class="space-y-2"></div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+          <h3 class="font-bold mb-4">Yaklaşan Etkinlikler</h3>
+          <div id="upcoming-events" class="space-y-2"></div>
         </div>
       </div>
 
@@ -346,10 +384,51 @@
   </div>
 </div>
 
+<!-- Yeni Etkinlik formu: tek DOM kopyasi, Ajanda sayfasi veya Dosya Detayi'na tasinir -->
+<div id="etkinlik-form-root" class="hidden bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+  <h3 class="font-bold">Yeni Etkinlik</h3>
+  <div class="grid md:grid-cols-2 gap-4">
+    <div>
+      <label class="block text-sm font-semibold mb-1">Başlık *</label>
+      <input id="etkinlik-baslik" type="text" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+    </div>
+    <div>
+      <label class="block text-sm font-semibold mb-1">Tür</label>
+      <select id="etkinlik-tur" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+        <option value="durusma">Duruşma</option>
+        <option value="sure">Süre</option>
+        <option value="hatirlatma">Hatırlatma</option>
+        <option value="genel" selected>Genel</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-sm font-semibold mb-1">Tarih *</label>
+      <input id="etkinlik-tarih" type="date" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+    </div>
+    <div>
+      <label class="block text-sm font-semibold mb-1">Saat</label>
+      <input id="etkinlik-saat" type="time" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+    </div>
+    <div class="md:col-span-2">
+      <label class="block text-sm font-semibold mb-1">Dosya (isteğe bağlı)</label>
+      <select id="etkinlik-dosya" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm"></select>
+    </div>
+    <div class="md:col-span-2">
+      <label class="block text-sm font-semibold mb-1">Açıklama</label>
+      <textarea id="etkinlik-aciklama" rows="2" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-3 text-sm"></textarea>
+    </div>
+  </div>
+  <div class="flex justify-end space-x-2">
+    <button onclick="closeEtkinlikForm()" class="text-sm px-4 py-2.5 rounded-lg border border-slate-300">Vazgeç</button>
+    <button onclick="submitEtkinlik()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-2.5 px-5 rounded-lg">Kaydet</button>
+  </div>
+</div>
+
 <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-xl transform translate-y-20 opacity-0 transition-all duration-300 z-50 text-sm"></div>
 
 <script src="api.js"></script>
 <script src="wizard.js"></script>
+<script src="ajanda.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

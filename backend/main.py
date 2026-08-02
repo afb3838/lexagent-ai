@@ -379,6 +379,80 @@ async def add_text_belge(
     return belge
 
 
+@app.post("/api/etkinlikler")
+async def create_etkinlik(
+    baslik: str = Form(...),
+    tarih: str = Form(...),
+    saat: Optional[str] = Form(None),
+    tur: str = Form("genel"),
+    aciklama: Optional[str] = Form(None),
+    dosya_id: Optional[str] = Form(None),
+    user: dict = Depends(get_current_user),
+):
+    if dosya_id:
+        await get_owned_dosya(dosya_id, user["id"])
+    row = {
+        "kullanici_id": user["id"],
+        "dosya_id": dosya_id or None,
+        "baslik": baslik,
+        "tarih": tarih,
+        "saat": saat or None,
+        "tur": tur,
+        "aciklama": aciklama or None,
+    }
+    return await db.insert("etkinlikler", row)
+
+
+@app.get("/api/etkinlikler")
+async def list_etkinlikler(user: dict = Depends(get_current_user)):
+    rows = await db.select("etkinlikler", {"kullanici_id": f"eq.{user['id']}"}, order="tarih.asc,saat.asc")
+    return {"etkinlikler": rows}
+
+
+@app.get("/api/dosyalar/{dosya_id}/etkinlikler")
+async def list_dosya_etkinlikleri(dosya_id: str, user: dict = Depends(get_current_user)):
+    await get_owned_dosya(dosya_id, user["id"])
+    rows = await db.select("etkinlikler", {"dosya_id": f"eq.{dosya_id}"}, order="tarih.asc,saat.asc")
+    return {"etkinlikler": rows}
+
+
+async def get_owned_etkinlik(etkinlik_id: str, user_id: str) -> dict:
+    etkinlik = await db.select_one("etkinlikler", {"id": f"eq.{etkinlik_id}", "kullanici_id": f"eq.{user_id}"})
+    if not etkinlik:
+        raise HTTPException(404, "Etkinlik bulunamadi.")
+    return etkinlik
+
+
+@app.patch("/api/etkinlikler/{etkinlik_id}")
+async def patch_etkinlik(
+    etkinlik_id: str,
+    baslik: Optional[str] = Form(None),
+    tarih: Optional[str] = Form(None),
+    saat: Optional[str] = Form(None),
+    tur: Optional[str] = Form(None),
+    aciklama: Optional[str] = Form(None),
+    tamamlandi: Optional[bool] = Form(None),
+    user: dict = Depends(get_current_user),
+):
+    await get_owned_etkinlik(etkinlik_id, user["id"])
+    fields = {
+        k: v
+        for k, v in {
+            "baslik": baslik,
+            "tarih": tarih,
+            "saat": saat,
+            "tur": tur,
+            "aciklama": aciklama,
+            "tamamlandi": tamamlandi,
+        }.items()
+        if v is not None
+    }
+    if not fields:
+        raise HTTPException(400, "Guncellenecek alan yok.")
+    rows = await db.patch("etkinlikler", {"id": f"eq.{etkinlik_id}"}, fields)
+    return rows[0]
+
+
 @app.get("/api/health")
 async def health():
     return {
