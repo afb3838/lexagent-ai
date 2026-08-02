@@ -62,6 +62,9 @@
       <a href="#/cari-hesap" data-route="cari-hesap" class="nav-link flex items-center px-3 py-2 rounded-lg">
         <i class="fa-solid fa-coins w-5"></i><span class="ml-2">Cari Hesap</span>
       </a>
+      <a href="#/icra-takip" data-route="icra-takip" class="nav-link flex items-center px-3 py-2 rounded-lg">
+        <i class="fa-solid fa-file-invoice-dollar w-5"></i><span class="ml-2">İcra Takip</span>
+      </a>
     </nav>
     <div class="p-3 border-t border-slate-800 space-y-2">
       <div id="health-badge" class="text-xs px-2.5 py-1 rounded-full bg-slate-800 text-slate-400 text-center">Kontrol ediliyor...</div>
@@ -332,6 +335,109 @@
         </div>
       </div>
 
+      <!-- PAGE: Icra Takip (liste) -->
+      <div id="page-icra-takip" class="page hidden space-y-6">
+        <div class="flex items-center justify-end">
+          <button onclick="openNewIcraForm()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-5 rounded-lg">
+            <i class="fa-solid fa-plus mr-1"></i> Yeni İcra Takibi
+          </button>
+        </div>
+
+        <div id="new-icra-form" class="hidden bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+          <h3 class="font-bold">Yeni İcra Takibi</h3>
+          <div class="grid md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold mb-1">Borçlu *</label>
+              <input id="new-icra-borclu" type="text" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold mb-1">Alacaklı *</label>
+              <input id="new-icra-alacakli" type="text" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold mb-1">Takip No</label>
+              <input id="new-icra-takip-no" type="text" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold mb-1">İcra Dairesi</label>
+              <input id="new-icra-daire" type="text" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold mb-1">Takip Tutarı (TL)</label>
+              <input id="new-icra-tutar" type="number" min="0" step="0.01" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold mb-1">Dosya (isteğe bağlı)</label>
+              <select id="new-icra-dosya" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm"></select>
+            </div>
+          </div>
+          <div class="flex justify-end space-x-2">
+            <button onclick="closeNewIcraForm()" class="text-sm px-4 py-2.5 rounded-lg border border-slate-300">Vazgeç</button>
+            <button onclick="submitNewIcra()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-2.5 px-5 rounded-lg">Oluştur</button>
+          </div>
+        </div>
+
+        <div id="icra-list" class="space-y-2"></div>
+      </div>
+
+      <!-- PAGE: Icra Takip Detayi -->
+      <div id="page-icra-detay" class="page hidden space-y-6">
+        <a href="#/icra-takip" class="text-sm text-slate-500 hover:text-indigo-600">
+          <i class="fa-solid fa-arrow-left mr-1"></i> İcra Takiplerime dön
+        </a>
+
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-3">
+          <div class="flex items-center justify-between">
+            <h2 id="icra-title" class="text-xl font-bold"></h2>
+            <select id="icra-durum" onchange="updateIcraDurum()" class="text-sm border border-slate-300 rounded-lg px-3 py-2">
+              <option value="acildi">Açıldı</option>
+              <option value="haciz_asamasinda">Haciz Aşamasında</option>
+              <option value="tahsil_edildi">Tahsil Edildi</option>
+              <option value="kapandi">Kapandı</option>
+            </select>
+          </div>
+          <div id="icra-meta" class="text-sm text-slate-500 grid sm:grid-cols-2 gap-1"></div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold">Haciz / Tahsilat Adımları</h3>
+            <button onclick="toggleIcraAdimForm()" class="bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold px-4 py-2 rounded-lg">
+              <i class="fa-solid fa-plus mr-1"></i>Adım Ekle
+            </button>
+          </div>
+          <div id="icra-adim-form" class="hidden space-y-3 border-b border-slate-100 pb-4">
+            <div class="grid md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-semibold mb-1">Tarih</label>
+                <input id="icra-adim-tarih" type="date" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+              </div>
+              <div>
+                <label class="block text-sm font-semibold mb-1">Tür</label>
+                <select id="icra-adim-tur" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+                  <option value="tebligat">Tebligat</option>
+                  <option value="haciz">Haciz</option>
+                  <option value="tahsilat">Tahsilat</option>
+                  <option value="diger">Diğer</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-semibold mb-1">Tutar (varsa)</label>
+                <input id="icra-adim-tutar" type="number" min="0" step="0.01" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+              </div>
+              <div>
+                <label class="block text-sm font-semibold mb-1">Açıklama</label>
+                <input id="icra-adim-aciklama" type="text" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+              </div>
+            </div>
+            <div class="flex justify-end">
+              <button onclick="submitIcraAdim()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-2.5 px-5 rounded-lg">Kaydet</button>
+            </div>
+          </div>
+          <div id="icra-adim-list" class="space-y-2"></div>
+        </div>
+      </div>
+
     </main>
   </div>
 </div>
@@ -518,6 +624,7 @@
 <script src="ajanda.js"></script>
 <script src="vekaletname.js"></script>
 <script src="cari.js"></script>
+<script src="icra.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

@@ -532,6 +532,100 @@ async def list_cari_hesap(user: dict = Depends(get_current_user)):
     return {"kayitlar": rows}
 
 
+@app.post("/api/icra")
+async def create_icra(
+    borclu_adi: str = Form(...),
+    alacakli_adi: str = Form(...),
+    takip_no: Optional[str] = Form(None),
+    icra_dairesi: Optional[str] = Form(None),
+    takip_tutari: Optional[float] = Form(None),
+    dosya_id: Optional[str] = Form(None),
+    user: dict = Depends(get_current_user),
+):
+    if dosya_id:
+        await get_owned_dosya(dosya_id, user["id"])
+    row = {
+        "kullanici_id": user["id"],
+        "dosya_id": dosya_id or None,
+        "borclu_adi": borclu_adi,
+        "alacakli_adi": alacakli_adi,
+        "takip_no": takip_no or None,
+        "icra_dairesi": icra_dairesi or None,
+        "takip_tutari": takip_tutari,
+    }
+    return await db.insert("icra_dosyalari", row)
+
+
+@app.get("/api/icra")
+async def list_icra(user: dict = Depends(get_current_user)):
+    rows = await db.select("icra_dosyalari", {"kullanici_id": f"eq.{user['id']}"}, order="created_at.desc")
+    return {"icra_dosyalari": rows}
+
+
+async def get_owned_icra(icra_id: str, user_id: str) -> dict:
+    icra = await db.select_one("icra_dosyalari", {"id": f"eq.{icra_id}", "kullanici_id": f"eq.{user_id}"})
+    if not icra:
+        raise HTTPException(404, "Icra takibi bulunamadi.")
+    return icra
+
+
+@app.get("/api/icra/{icra_id}")
+async def get_icra(icra_id: str, user: dict = Depends(get_current_user)):
+    icra = await get_owned_icra(icra_id, user["id"])
+    adimlar = await db.select("icra_adimlari", {"icra_id": f"eq.{icra_id}"}, order="tarih.desc")
+    return {**icra, "adimlar": adimlar}
+
+
+@app.patch("/api/icra/{icra_id}")
+async def patch_icra(
+    icra_id: str,
+    borclu_adi: Optional[str] = Form(None),
+    alacakli_adi: Optional[str] = Form(None),
+    takip_no: Optional[str] = Form(None),
+    icra_dairesi: Optional[str] = Form(None),
+    takip_tutari: Optional[float] = Form(None),
+    durum: Optional[str] = Form(None),
+    user: dict = Depends(get_current_user),
+):
+    await get_owned_icra(icra_id, user["id"])
+    fields = {
+        k: v
+        for k, v in {
+            "borclu_adi": borclu_adi,
+            "alacakli_adi": alacakli_adi,
+            "takip_no": takip_no,
+            "icra_dairesi": icra_dairesi,
+            "takip_tutari": takip_tutari,
+            "durum": durum,
+        }.items()
+        if v is not None
+    }
+    if not fields:
+        raise HTTPException(400, "Guncellenecek alan yok.")
+    rows = await db.patch("icra_dosyalari", {"id": f"eq.{icra_id}"}, fields)
+    return rows[0]
+
+
+@app.post("/api/icra/{icra_id}/adimlar")
+async def create_icra_adim(
+    icra_id: str,
+    tarih: str = Form(...),
+    tur: str = Form("diger"),
+    aciklama: Optional[str] = Form(None),
+    tutar: Optional[float] = Form(None),
+    user: dict = Depends(get_current_user),
+):
+    await get_owned_icra(icra_id, user["id"])
+    row = {
+        "icra_id": icra_id,
+        "tarih": tarih,
+        "tur": tur,
+        "aciklama": aciklama or None,
+        "tutar": tutar,
+    }
+    return await db.insert("icra_adimlari", row)
+
+
 @app.get("/api/health")
 async def health():
     return {

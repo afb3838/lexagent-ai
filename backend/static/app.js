@@ -21,6 +21,7 @@ const PAGE_TITLES = {
   ajanda: "Ajanda",
   vekaletnameler: "Vekaletnameler",
   "cari-hesap": "Cari Hesap",
+  "icra-takip": "İcra Takip",
 };
 
 function showToast(msg) {
@@ -121,6 +122,12 @@ async function router() {
     document.getElementById("aaut-sonuc").classList.add("hidden");
     document.getElementById("aaut-deger").value = "";
     await loadCariHesapPage();
+  } else if (route === "icra-takip" && param) {
+    showPage("page-icra-detay");
+    await openIcraPage(param);
+  } else if (route === "icra-takip") {
+    showPage("page-icra-takip");
+    await loadIcraListPage();
   } else {
     location.hash = "#/dosyalar";
   }
@@ -172,16 +179,37 @@ function closeNewDosyaForm() {
   );
 }
 
+async function celiskiKontrolu(muvekkil_adi, karsi_taraf) {
+  if (!karsi_taraf) return true;
+  let mevcutDosyalar = [];
+  try {
+    mevcutDosyalar = await api.listDosyalar();
+  } catch (err) {
+    return true; // kontrol edilemiyorsa engelleme
+  }
+  const a = muvekkil_adi.trim().toLowerCase();
+  const b = karsi_taraf.trim().toLowerCase();
+  const carpisan = mevcutDosyalar.find(
+    (d) => (d.muvekkil_adi || "").trim().toLowerCase() === b || (d.karsi_taraf || "").trim().toLowerCase() === a
+  );
+  if (!carpisan) return true;
+  return confirm(
+    `⚠️ Çelişki uyarısı: "${carpisan.muvekkil_adi}${carpisan.karsi_taraf ? " vs. " + carpisan.karsi_taraf : ""}" dosyasıyla isim çakışması var (aynı kişi başka bir dosyada müvekkil/karşı taraf olarak görünüyor). Yine de devam etmek istiyor musunuz?`
+  );
+}
+
 async function submitNewDosya() {
   const muvekkil_adi = document.getElementById("new-muvekkil").value.trim();
+  const karsi_taraf = document.getElementById("new-karsi-taraf").value.trim();
   if (!muvekkil_adi) {
     showToast("Müvekkil adı zorunlu.");
     return;
   }
+  if (!(await celiskiKontrolu(muvekkil_adi, karsi_taraf))) return;
   try {
     const dosya = await api.createDosya({
       muvekkil_adi,
-      karsi_taraf: document.getElementById("new-karsi-taraf").value.trim(),
+      karsi_taraf,
       mahkeme: document.getElementById("new-mahkeme").value.trim(),
       esas_no: document.getElementById("new-esas-no").value.trim(),
       dava_turu: document.getElementById("new-dava-turu").value.trim(),

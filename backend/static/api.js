@@ -160,4 +160,24 @@ const api = {
     const res = await authedFetch("/api/cari-hesap");
     return (await res.json()).kayitlar;
   },
+  async listIcra() {
+    const res = await authedFetch("/api/icra");
+    return (await res.json()).icra_dosyalari;
+  },
+  async createIcra(fields) {
+    const res = await authedFetch("/api/icra", { method: "POST", body: toFormData(fields) });
+    return res.json();
+  },
+  async getIcra(id) {
+    const res = await authedFetch(`/api/icra/${id}`);
+    return res.json();
+  },
+  async patchIcra(id, fields) {
+    const res = await authedFetch(`/api/icra/${id}`, { method: "PATCH", body: toFormData(fields) });
+    return res.json();
+  },
+  async createIcraAdim(id, fields) {
+    const res = await authedFetch(`/api/icra/${id}/adimlar`, { method: "POST", body: toFormData(fields) });
+    return res.json();
+  },
 };
