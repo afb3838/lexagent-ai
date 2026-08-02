@@ -134,4 +134,30 @@ const api = {
     const res = await authedFetch(`/api/etkinlikler/${id}`, { method: "PATCH", body: toFormData(fields) });
     return res.json();
   },
+  async createVekaletname(dosyaId, fields, file) {
+    const fd = toFormData(fields);
+    if (file) fd.append("dosya", file);
+    const res = await authedFetch(`/api/dosyalar/${dosyaId}/vekaletname`, { method: "POST", body: fd });
+    return res.json();
+  },
+  async listDosyaVekaletname(dosyaId) {
+    const res = await authedFetch(`/api/dosyalar/${dosyaId}/vekaletname`);
+    return (await res.json()).vekaletnameler;
+  },
+  async listVekaletnameler() {
+    const res = await authedFetch("/api/vekaletnameler");
+    return (await res.json()).vekaletnameler;
+  },
+  async createCariHesapKaydi(dosyaId, fields) {
+    const res = await authedFetch(`/api/dosyalar/${dosyaId}/cari-hesap`, { method: "POST", body: toFormData(fields) });
+    return res.json();
+  },
+  async listDosyaCariHesap(dosyaId) {
+    const res = await authedFetch(`/api/dosyalar/${dosyaId}/cari-hesap`);
+    return (await res.json()).kayitlar;
+  },
+  async listCariHesap() {
+    const res = await authedFetch("/api/cari-hesap");
+    return (await res.json()).kayitlar;
+  },
 };

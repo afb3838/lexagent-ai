@@ -85,7 +85,7 @@ function showPage(pageId) {
   document.getElementById(pageId).classList.remove("hidden");
 }
 
-const NAV_BADGE_ROUTES = new Set(["vekaletnameler", "cari-hesap"]);
+const NAV_BADGE_ROUTES = new Set();
 
 function highlightNav(route) {
   document.querySelectorAll("#sidebar-nav .nav-link").forEach((el) => {
@@ -113,8 +113,14 @@ async function router() {
   } else if (route === "ajanda") {
     showPage("page-ajanda");
     await loadAjandaPage();
-  } else if (["vekaletnameler", "cari-hesap"].includes(route)) {
-    showPage("page-" + route);
+  } else if (route === "vekaletnameler") {
+    showPage("page-vekaletnameler");
+    await loadVekaletnamelerPage();
+  } else if (route === "cari-hesap") {
+    showPage("page-cari-hesap");
+    document.getElementById("aaut-sonuc").classList.add("hidden");
+    document.getElementById("aaut-deger").value = "";
+    await loadCariHesapPage();
   } else {
     location.hash = "#/dosyalar";
   }
@@ -194,6 +200,8 @@ async function openDosyaPage(id) {
   if (currentDosyaId !== id) {
     mountWizard("wizard-mount-dosya", id);
     document.getElementById("belge-upload-progress").innerHTML = "";
+    document.getElementById("vekaletname-form").classList.add("hidden");
+    document.getElementById("cari-hesap-form").classList.add("hidden");
   }
   await refreshDosyaInfo(id);
 }
@@ -232,6 +240,8 @@ function renderDosya(dosya) {
   }
   synthesizeCaseDetails(dosya.belgeler || []);
   loadDosyaEtkinlikleri(dosya.id);
+  loadDosyaVekaletname(dosya.id);
+  loadDosyaCariHesap(dosya.id);
 }
 
 async function updateDurum() {

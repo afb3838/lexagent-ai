@@ -453,6 +453,85 @@ async def patch_etkinlik(
     return rows[0]
 
 
+@app.post("/api/dosyalar/{dosya_id}/vekaletname")
+async def create_vekaletname(
+    dosya_id: str,
+    veren_tarih: Optional[str] = Form(None),
+    gecerlilik_tarihi: Optional[str] = Form(None),
+    ozel_yetkiler: Optional[str] = Form(None),
+    notlar: Optional[str] = Form(None),
+    dosya: Optional[UploadFile] = File(None),
+    user: dict = Depends(get_current_user),
+):
+    await get_owned_dosya(dosya_id, user["id"])
+    storage_path = None
+    if dosya is not None and dosya.filename:
+        data = await dosya.read()
+        try:
+            path = f"vekaletname/{dosya_id}/{uuid.uuid4()}-{dosya.filename}"
+            storage_path = await db.upload_file(STORAGE_BUCKET, path, data, dosya.content_type)
+        except Exception:
+            pass
+    row = {
+        "kullanici_id": user["id"],
+        "dosya_id": dosya_id,
+        "veren_tarih": veren_tarih or None,
+        "gecerlilik_tarihi": gecerlilik_tarihi or None,
+        "ozel_yetkiler": ozel_yetkiler or None,
+        "notlar": notlar or None,
+        "storage_path": storage_path,
+    }
+    return await db.insert("vekaletnameler", row)
+
+
+@app.get("/api/dosyalar/{dosya_id}/vekaletname")
+async def list_dosya_vekaletname(dosya_id: str, user: dict = Depends(get_current_user)):
+    await get_owned_dosya(dosya_id, user["id"])
+    rows = await db.select("vekaletnameler", {"dosya_id": f"eq.{dosya_id}"}, order="created_at.desc")
+    return {"vekaletnameler": rows}
+
+
+@app.get("/api/vekaletnameler")
+async def list_vekaletnameler(user: dict = Depends(get_current_user)):
+    rows = await db.select("vekaletnameler", {"kullanici_id": f"eq.{user['id']}"}, order="created_at.desc")
+    return {"vekaletnameler": rows}
+
+
+@app.post("/api/dosyalar/{dosya_id}/cari-hesap")
+async def create_cari_hesap_kaydi(
+    dosya_id: str,
+    tur: str = Form(...),
+    tutar: float = Form(...),
+    aciklama: Optional[str] = Form(None),
+    tarih: Optional[str] = Form(None),
+    user: dict = Depends(get_current_user),
+):
+    await get_owned_dosya(dosya_id, user["id"])
+    row = {
+        "kullanici_id": user["id"],
+        "dosya_id": dosya_id,
+        "tur": tur,
+        "tutar": tutar,
+        "aciklama": aciklama or None,
+        "tarih": tarih or None,
+    }
+    row = {k: v for k, v in row.items() if v is not None}
+    return await db.insert("cari_hesap_kayitlari", row)
+
+
+@app.get("/api/dosyalar/{dosya_id}/cari-hesap")
+async def list_dosya_cari_hesap(dosya_id: str, user: dict = Depends(get_current_user)):
+    await get_owned_dosya(dosya_id, user["id"])
+    rows = await db.select("cari_hesap_kayitlari", {"dosya_id": f"eq.{dosya_id}"}, order="tarih.desc")
+    return {"kayitlar": rows}
+
+
+@app.get("/api/cari-hesap")
+async def list_cari_hesap(user: dict = Depends(get_current_user)):
+    rows = await db.select("cari_hesap_kayitlari", {"kullanici_id": f"eq.{user['id']}"}, order="tarih.desc")
+    return {"kayitlar": rows}
+
+
 @app.get("/api/health")
 async def health():
     return {

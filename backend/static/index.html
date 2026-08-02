@@ -56,13 +56,11 @@
       <a href="#/ajanda" data-route="ajanda" class="nav-link flex items-center px-3 py-2 rounded-lg">
         <i class="fa-solid fa-calendar-days w-5"></i><span class="ml-2">Ajanda</span>
       </a>
-      <a href="#/vekaletnameler" data-route="vekaletnameler" class="nav-link flex items-center justify-between px-3 py-2 rounded-lg">
-        <span><i class="fa-solid fa-file-signature w-5"></i><span class="ml-2">Vekaletnameler</span></span>
-        <span class="text-[10px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded">Yakında</span>
+      <a href="#/vekaletnameler" data-route="vekaletnameler" class="nav-link flex items-center px-3 py-2 rounded-lg">
+        <i class="fa-solid fa-file-signature w-5"></i><span class="ml-2">Vekaletnameler</span>
       </a>
-      <a href="#/cari-hesap" data-route="cari-hesap" class="nav-link flex items-center justify-between px-3 py-2 rounded-lg">
-        <span><i class="fa-solid fa-coins w-5"></i><span class="ml-2">Cari Hesap</span></span>
-        <span class="text-[10px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded">Yakında</span>
+      <a href="#/cari-hesap" data-route="cari-hesap" class="nav-link flex items-center px-3 py-2 rounded-lg">
+        <i class="fa-solid fa-coins w-5"></i><span class="ml-2">Cari Hesap</span>
       </a>
     </nav>
     <div class="p-3 border-t border-slate-800 space-y-2">
@@ -173,6 +171,82 @@
           <div id="dosya-etkinlik-list" class="space-y-2"></div>
         </div>
 
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold">Vekaletname</h3>
+            <button onclick="toggleVekaletnameForm()" class="bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold px-4 py-2 rounded-lg">
+              <i class="fa-solid fa-file-signature mr-1"></i>Vekaletname Ekle/Güncelle
+            </button>
+          </div>
+          <div id="vekaletname-durum-box"></div>
+          <div id="vekaletname-form" class="hidden space-y-3 border-t border-slate-100 pt-4">
+            <div class="grid md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-semibold mb-1">Veren Tarih</label>
+                <input id="vekaletname-veren-tarih" type="date" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+              </div>
+              <div>
+                <label class="block text-sm font-semibold mb-1">Geçerlilik Tarihi</label>
+                <input id="vekaletname-gecerlilik-tarihi" type="date" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+              </div>
+              <div class="md:col-span-2">
+                <label class="block text-sm font-semibold mb-1">Özel Yetkiler</label>
+                <input id="vekaletname-ozel-yetkiler" type="text" placeholder="Örn: Temyiz, Sulh, İbra, Ahzu Kabz"
+                       class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+              </div>
+              <div class="md:col-span-2">
+                <label class="block text-sm font-semibold mb-1">Taranmış Belge (isteğe bağlı)</label>
+                <input id="vekaletname-dosya" type="file" accept=".pdf,.jpg,.jpeg,.png" class="w-full text-sm">
+              </div>
+              <div class="md:col-span-2">
+                <label class="block text-sm font-semibold mb-1">Notlar</label>
+                <textarea id="vekaletname-notlar" rows="2" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-3 text-sm"></textarea>
+              </div>
+            </div>
+            <div class="flex justify-end">
+              <button onclick="submitVekaletname()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-2.5 px-5 rounded-lg">Kaydet</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold">Cari Hesap</h3>
+            <button onclick="toggleCariHesapForm()" class="bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold px-4 py-2 rounded-lg">
+              <i class="fa-solid fa-plus mr-1"></i>Kayıt Ekle
+            </button>
+          </div>
+          <div id="cari-hesap-form" class="hidden space-y-3 border-b border-slate-100 pb-4">
+            <div class="grid md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-semibold mb-1">Tür</label>
+                <select id="cari-tur" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+                  <option value="ucret">Ücret</option>
+                  <option value="masraf">Masraf</option>
+                  <option value="odeme">Ödeme</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-semibold mb-1">Tutar (TL)</label>
+                <input id="cari-tutar" type="number" min="0" step="0.01" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+              </div>
+              <div>
+                <label class="block text-sm font-semibold mb-1">Tarih</label>
+                <input id="cari-tarih" type="date" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+              </div>
+              <div>
+                <label class="block text-sm font-semibold mb-1">Açıklama</label>
+                <input id="cari-aciklama" type="text" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+              </div>
+            </div>
+            <div class="flex justify-end">
+              <button onclick="submitCariHesapKaydi()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-2.5 px-5 rounded-lg">Kaydet</button>
+            </div>
+          </div>
+          <div id="cari-hesap-bakiye" class="text-sm font-semibold"></div>
+          <div id="cari-hesap-list" class="space-y-2"></div>
+        </div>
+
         <div id="wizard-mount-dosya"></div>
       </div>
 
@@ -225,27 +299,36 @@
         </div>
       </div>
 
-      <!-- PAGE: Vekaletnameler (placeholder) -->
-      <div id="page-vekaletnameler" class="page hidden">
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-12 text-center space-y-3">
-          <i class="fa-solid fa-file-signature text-3xl text-slate-300"></i>
-          <h3 class="font-bold text-lg">Vekaletname Klasörü</h3>
-          <p class="text-sm text-slate-500 max-w-md mx-auto">
-            Müvekkil bazlı vekaletname kayıtları ve süre takibi burada yönetilecek.
-            Bu modül yakında ekleniyor.
-          </p>
+      <!-- PAGE: Vekaletnameler -->
+      <div id="page-vekaletnameler" class="page hidden space-y-6">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+          <div id="vekaletname-overview-list" class="space-y-2"></div>
         </div>
       </div>
 
-      <!-- PAGE: Cari Hesap (placeholder) -->
-      <div id="page-cari-hesap" class="page hidden">
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-12 text-center space-y-3">
-          <i class="fa-solid fa-coins text-3xl text-slate-300"></i>
-          <h3 class="font-bold text-lg">Cari Hesap / Müvekkil Defteri</h3>
-          <p class="text-sm text-slate-500 max-w-md mx-auto">
-            Müvekkil bazlı ücret, ödeme ve masraf takibi burada yönetilecek.
-            Bu modül yakında ekleniyor.
-          </p>
+      <!-- PAGE: Cari Hesap -->
+      <div id="page-cari-hesap" class="page hidden space-y-6">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+          <h3 class="font-bold mb-4">Dosya Bazlı Bakiye</h3>
+          <div id="cari-overview-list" class="space-y-2"></div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+          <h3 class="font-bold">AAÜT Ücret Hesaplayıcı</h3>
+          <div class="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 text-sm text-amber-900 flex items-start gap-2">
+            <i class="fa-solid fa-triangle-exclamation mt-0.5"></i>
+            <span><strong>Bu hesaplayıcı yardımcı bir araçtır, örnek/yaklaşık oranlar kullanır.</strong> Gerçek ücreti mutlaka güncel AAÜT (Resmi Gazete) ile karşılaştırıp kendiniz doğrulayın.</span>
+          </div>
+          <div class="grid md:grid-cols-2 gap-4 items-end">
+            <div>
+              <label class="block text-sm font-semibold mb-1">Dava Değeri (TL)</label>
+              <input id="aaut-deger" type="number" min="0" step="0.01" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+            </div>
+            <button onclick="hesaplaAAUT()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-6 rounded-lg">
+              Hesapla
+            </button>
+          </div>
+          <div id="aaut-sonuc" class="hidden bg-indigo-50/50 border border-indigo-100 rounded-xl p-4 text-sm"></div>
         </div>
       </div>
 
@@ -433,6 +516,8 @@
 <script src="api.js"></script>
 <script src="wizard.js"></script>
 <script src="ajanda.js"></script>
+<script src="vekaletname.js"></script>
+<script src="cari.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
