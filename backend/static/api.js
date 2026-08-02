@@ -76,6 +76,33 @@ async function runUploadQueue(files, containerId, uploadOne) {
   return results;
 }
 
+async function downloadBlobResponse(res, fallbackName) {
+  const blob = await res.blob();
+  const disposition = res.headers.get("Content-Disposition") || "";
+  const match = disposition.match(/filename="?([^"]+)"?/);
+  const filename = match ? match[1] : fallbackName;
+  const blobUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = blobUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(blobUrl);
+}
+
+async function downloadTextAsPdf(baslik, metin) {
+  const res = await authedFetch("/api/convert/text-to-pdf", { method: "POST", body: toFormData({ baslik, metin }) });
+  await downloadBlobResponse(res, "belge.pdf");
+}
+
+async function downloadFileAsPdf(file) {
+  const fd = new FormData();
+  fd.append("file", file);
+  const res = await authedFetch("/api/convert/to-pdf", { method: "POST", body: fd });
+  await downloadBlobResponse(res, "belge.pdf");
+}
+
 const api = {
   async health() {
     const res = await fetch("/api/health");
@@ -179,5 +206,9 @@ const api = {
   async createIcraAdim(id, fields) {
     const res = await authedFetch(`/api/icra/${id}/adimlar`, { method: "POST", body: toFormData(fields) });
     return res.json();
+  },
+  async searchMevzuat(q) {
+    const res = await authedFetch(`/api/mevzuat?q=${encodeURIComponent(q || "")}`);
+    return (await res.json()).mevzuat;
   },
 };

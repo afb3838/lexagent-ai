@@ -201,3 +201,16 @@ function copyPetition() {
   navigator.clipboard.writeText(text);
   showToast("Panoya kopyalandı.");
 }
+
+async function downloadPetitionAsPdf() {
+  if (!lastDraftText) {
+    showToast("İndirilecek dilekçe yok.");
+    return;
+  }
+  try {
+    const baslik = document.getElementById("caseSubject").value.trim() || "Dilekce Taslagi";
+    await downloadTextAsPdf(baslik, lastDraftText);
+  } catch (err) {
+    showToast("PDF oluşturulamadı: " + err.message);
+  }
+}

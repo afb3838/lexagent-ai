@@ -22,6 +22,7 @@ const PAGE_TITLES = {
   vekaletnameler: "Vekaletnameler",
   "cari-hesap": "Cari Hesap",
   "icra-takip": "İcra Takip",
+  mevzuat: "Mevzuat",
 };
 
 function showToast(msg) {
@@ -128,6 +129,9 @@ async function router() {
   } else if (route === "icra-takip") {
     showPage("page-icra-takip");
     await loadIcraListPage();
+  } else if (route === "mevzuat") {
+    showPage("page-mevzuat");
+    await loadMevzuatPage();
   } else {
     location.hash = "#/dosyalar";
   }
@@ -282,7 +286,10 @@ async function updateDurum() {
   }
 }
 
+let currentBelgeler = [];
+
 function renderBelgeList(belgeler) {
+  currentBelgeler = belgeler;
   const box = document.getElementById("belge-list");
   if (!belgeler.length) {
     box.innerHTML = '<p class="text-sm text-slate-400">Henüz belge yok.</p>';
@@ -290,15 +297,25 @@ function renderBelgeList(belgeler) {
   }
   box.innerHTML = belgeler
     .map(
-      (b) => `
+      (b, i) => `
     <div class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs">
       <span><i class="fa-solid fa-file-lines text-indigo-600 mr-1"></i>${b.ad}
         <span class="text-slate-400 ml-1">(${BELGE_TUR_LABELS[b.tur] || b.tur})</span>
         ${b.error ? ' <span class="text-rose-500">hata: ' + b.error + "</span>" : ""}
       </span>
+      ${b.metin ? `<button onclick="downloadBelgeAsPdf(${i})" class="text-slate-400 hover:text-indigo-600" title="PDF indir"><i class="fa-solid fa-file-pdf"></i></button>` : ""}
     </div>`
     )
     .join("");
+}
+
+async function downloadBelgeAsPdf(i) {
+  const belge = currentBelgeler[i];
+  try {
+    await downloadTextAsPdf(belge.ad, belge.metin);
+  } catch (err) {
+    showToast("PDF oluşturulamadı: " + err.message);
+  }
 }
 
 function synthesizeCaseDetails(belgeler) {

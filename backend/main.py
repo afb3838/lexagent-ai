@@ -1,15 +1,20 @@
 import os
 import io
+import html as html_lib
 import re
 import uuid
 import zipfile
 from typing import List, Optional
 
 import httpx
-from fastapi import Depends, FastAPI, Form, HTTPException, UploadFile, File
+from fastapi import Depends, FastAPI, Form, HTTPException, Response, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import pypdf
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.units import cm
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 
 import auth
 import db
@@ -69,6 +74,20 @@ def extract_text_for(filename: str, data: bytes) -> str:
     if name_lower.endswith(".udf"):
         return extract_udf_text(data)
     raise ValueError("Desteklenmeyen dosya turu")
+
+
+def generate_pdf_bytes(baslik: str, metin: str) -> bytes:
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buf, pagesize=A4, topMargin=2 * cm, bottomMargin=2 * cm, leftMargin=2 * cm, rightMargin=2 * cm
+    )
+    styles = getSampleStyleSheet()
+    story = [Paragraph(html_lib.escape(baslik), styles["Title"]), Spacer(1, 12)]
+    for para in metin.split("\n"):
+        story.append(Paragraph(html_lib.escape(para) or "&nbsp;", styles["Normal"]))
+        story.append(Spacer(1, 4))
+    doc.build(story)
+    return buf.getvalue()
 
 
 @app.post("/api/parse")
@@ -624,6 +643,50 @@ async def create_icra_adim(
         "tutar": tutar,
     }
     return await db.insert("icra_adimlari", row)
+
+
+@app.post("/api/convert/to-pdf")
+async def convert_file_to_pdf(file: UploadFile = File(...), user: dict = Depends(get_current_user)):
+    data = await file.read()
+    try:
+        metin = extract_text_for(file.filename, data)
+    except Exception as e:
+        raise HTTPException(400, str(e))
+    pdf_bytes = generate_pdf_bytes(file.filename, metin)
+    filename = re.sub(r"\.(pdf|udf)$", "", file.filename, flags=re.IGNORECASE) + ".pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@app.post("/api/convert/text-to-pdf")
+async def convert_text_to_pdf(
+    baslik: str = Form("Belge"),
+    metin: str = Form(...),
+    user: dict = Depends(get_current_user),
+):
+    pdf_bytes = generate_pdf_bytes(baslik, metin)
+    filename = re.sub(r"[^\w\-]+", "_", baslik).strip("_")[:60] or "belge"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}.pdf"'},
+    )
+
+
+@app.get("/api/mevzuat")
+async def search_mevzuat(q: str = "", user: dict = Depends(get_current_user)):
+    if q:
+        rows = await db.select(
+            "mevzuat",
+            {"or": f"(kanun_adi.ilike.*{q}*,ozet.ilike.*{q}*,kategori.ilike.*{q}*)"},
+            order="kanun_adi.asc",
+        )
+    else:
+        rows = await db.select("mevzuat", {}, order="kanun_adi.asc")
+    return {"mevzuat": rows}
 
 
 @app.get("/api/health")

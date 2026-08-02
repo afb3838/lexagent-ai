@@ -65,6 +65,9 @@
       <a href="#/icra-takip" data-route="icra-takip" class="nav-link flex items-center px-3 py-2 rounded-lg">
         <i class="fa-solid fa-file-invoice-dollar w-5"></i><span class="ml-2">İcra Takip</span>
       </a>
+      <a href="#/mevzuat" data-route="mevzuat" class="nav-link flex items-center px-3 py-2 rounded-lg">
+        <i class="fa-solid fa-book w-5"></i><span class="ml-2">Mevzuat</span>
+      </a>
     </nav>
     <div class="p-3 border-t border-slate-800 space-y-2">
       <div id="health-badge" class="text-xs px-2.5 py-1 rounded-full bg-slate-800 text-slate-400 text-center">Kontrol ediliyor...</div>
@@ -438,6 +441,21 @@
         </div>
       </div>
 
+      <!-- PAGE: Mevzuat (iskelet + ornek veri) -->
+      <div id="page-mevzuat" class="page hidden space-y-6">
+        <div class="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 text-sm text-amber-900 flex items-start gap-2">
+          <i class="fa-solid fa-triangle-exclamation mt-0.5"></i>
+          <span><strong>Bu bir iskelet/demodur.</strong> Küçük bir örnek veri seti içerir; tam mevzuat.gov.tr / Resmi Gazete entegrasyonu ayrı bir çalışmadır. Sonuçları mutlaka resmi kaynaktan doğrulayın.</span>
+        </div>
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+          <div class="flex gap-2">
+            <input id="mevzuat-arama" type="text" placeholder="Kanun adı veya kategori ara..." class="flex-1 bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm" onkeydown="if(event.key==='Enter') aramaMevzuat()">
+            <button onclick="aramaMevzuat()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-6 rounded-lg">Ara</button>
+          </div>
+          <div id="mevzuat-sonuc" class="space-y-2"></div>
+        </div>
+      </div>
+
     </main>
   </div>
 </div>
@@ -557,9 +575,14 @@
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-xl font-bold">Dilekçe Taslağı</h2>
-        <button onclick="copyPetition()" class="bg-slate-100 hover:bg-slate-200 text-xs font-semibold px-4 py-2 rounded-lg border border-slate-300">
-          <i class="fa-solid fa-copy mr-1"></i> Kopyala
-        </button>
+        <div class="flex gap-2">
+          <button onclick="downloadPetitionAsPdf()" class="bg-slate-100 hover:bg-slate-200 text-xs font-semibold px-4 py-2 rounded-lg border border-slate-300">
+            <i class="fa-solid fa-file-pdf mr-1"></i> PDF İndir
+          </button>
+          <button onclick="copyPetition()" class="bg-slate-100 hover:bg-slate-200 text-xs font-semibold px-4 py-2 rounded-lg border border-slate-300">
+            <i class="fa-solid fa-copy mr-1"></i> Kopyala
+          </button>
+        </div>
       </div>
       <div id="draft-loading" class="hidden text-center py-12 text-slate-500">
         <i class="fa-solid fa-spinner animate-spin text-2xl text-indigo-600 mb-3"></i>
@@ -625,6 +648,7 @@
 <script src="vekaletname.js"></script>
 <script src="cari.js"></script>
 <script src="icra.js"></script>
+<script src="mevzuat.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
