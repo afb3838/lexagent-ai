@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import pypdf
 
+import auth
 import db
 from auth import get_current_user
 
@@ -359,7 +360,14 @@ Yukaridaki bilgilerle eksiksiz, resmi bir dilekce taslagi yaz."""
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", "model": MODEL_NAME, "api_key_configured": bool(GEMINI_API_KEY)}
+    return {
+        "status": "ok",
+        "model": MODEL_NAME,
+        "api_key_configured": bool(GEMINI_API_KEY),
+        "supabase_url_configured": bool(auth.SUPABASE_URL),
+        "supabase_jwt_secret_configured": bool(auth.SUPABASE_JWT_SECRET),
+        "supabase_service_role_configured": bool(db.SUPABASE_SERVICE_ROLE_KEY),
+    }
 
 
 # Frontend'i (static/) ayni servisten sun -> ayri bir hosting'e / CORS ayarina gerek kalmaz
