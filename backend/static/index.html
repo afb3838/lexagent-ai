@@ -235,6 +235,10 @@
         <p class="text-xs text-slate-500">.pdf, .udf</p>
       </div>
       <div id="standalone-file-list" class="space-y-2"></div>
+      <p class="text-xs text-slate-500 flex items-start gap-1.5">
+        <i class="fa-solid fa-circle-info mt-0.5"></i>
+        <span>İşleme konu belgelerinizi (dilekçe, tebligat, karar vb.) yükleyin — sistem içeriği otomatik olarak analiz edip aşağıdaki olay özetini oluşturacaktır.</span>
+      </p>
     </div>
 
     <div class="grid md:grid-cols-2 gap-4">
@@ -272,14 +276,14 @@
       <div class="flex items-center justify-between mb-1">
         <label class="text-sm font-semibold">Olay Özeti / Evrak İçeriği</label>
       </div>
-      <textarea id="caseDetails" rows="6" placeholder="Bir dosya içindeyseniz yüklediğiniz belgelerden otomatik doldurulur; elle de yazabilirsiniz."
+      <textarea id="caseDetails" rows="6" placeholder="Bir dosya içindeyseniz o dosyaya kayıtlı belgelerden otomatik doldurulur; değilseniz bu aşamada yüklediğiniz evraklardan oluşturulacaktır. Elle de yazabilirsiniz."
                 class="w-full bg-slate-50 border border-slate-300 rounded-lg p-3 text-sm custom-scrollbar"></textarea>
     </div>
 
-    <div class="bg-indigo-50/50 border border-indigo-100 rounded-xl p-4 space-y-2">
+    <div class="bg-indigo-50 border-2 border-indigo-300 rounded-xl p-4 space-y-2 shadow-sm ring-1 ring-indigo-100">
       <label class="block text-sm font-bold text-indigo-900"><i class="fa-solid fa-pen-nib mr-1"></i> Ajandan İsteğiniz</label>
       <input id="instruction" type="text" placeholder="Örn: Davaya cevap dilekçesi olsun, zamanaşımı itirazı vurgulansın."
-             class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+             class="w-full bg-white border border-indigo-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
     </div>
 
     <div class="flex justify-end">
