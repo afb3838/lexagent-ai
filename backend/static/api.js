@@ -1,8 +1,8 @@
 // Faz 0 kurulumundan sonra bu iki degeri kendi Supabase projenizin bilgileriyle
 // degistirin (Supabase Dashboard > Settings > API). anon key public bir anahtardir,
 // tarayicida bulunmasi guvenlidir (GEMINI_API_KEY ile karistirmayin, o asla buraya gelmez).
-const SUPABASE_URL = "YOUR_SUPABASE_URL";
-const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+const SUPABASE_URL = "https://uwoupkvyibfhnrtqzpje.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_ux_CMhpj43aLgAVHhYqIDw_HPT5nxln";
 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
