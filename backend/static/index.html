@@ -10,6 +10,8 @@
 <style>
   .custom-scrollbar::-webkit-scrollbar{width:6px}
   .custom-scrollbar::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}
+  .upload-bar-indeterminate{width:40%;animation:upload-indeterminate 1.1s ease-in-out infinite}
+  @keyframes upload-indeterminate{0%{margin-left:-40%}100%{margin-left:100%}}
 </style>
 </head>
 <body class="h-full font-sans text-slate-800">
@@ -156,6 +158,7 @@
             <i class="fa-solid fa-cloud-arrow-up text-2xl text-indigo-600 mb-2"></i>
             <p class="text-sm font-semibold">Belge yüklemek için tıklayın (.pdf, .udf)</p>
           </div>
+          <div id="belge-upload-progress" class="space-y-2"></div>
           <div id="belge-list" class="space-y-2"></div>
         </div>
 
@@ -272,6 +275,7 @@
         <p class="text-sm font-semibold">Dosyaları seçmek için tıklayın</p>
         <p class="text-xs text-slate-500">.pdf, .udf</p>
       </div>
+      <div id="standalone-upload-progress" class="space-y-2"></div>
       <div id="standalone-file-list" class="space-y-2"></div>
       <p class="text-xs text-slate-500 flex items-start gap-1.5">
         <i class="fa-solid fa-circle-info mt-0.5"></i>

@@ -29,6 +29,53 @@ function toFormData(fields) {
   return fd;
 }
 
+// Dosyalari tek tek yukleyip her biri icin ayri bir ilerleme cubugu gosterir.
+// uploadOne(file) her dosya icin cagrilir; basarili sonucu dondurur ya da hata firlatir.
+async function runUploadQueue(files, containerId, uploadOne) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = "";
+  const items = Array.from(files).map((file, i) => {
+    const id = `upload-item-${Date.now()}-${i}`;
+    container.insertAdjacentHTML(
+      "beforeend",
+      `<div id="${id}" class="border border-slate-200 rounded-lg p-3 text-xs space-y-1.5">
+        <div class="flex items-center justify-between gap-2">
+          <span class="truncate"><i class="fa-solid fa-file-lines text-indigo-600 mr-1"></i>${file.name}</span>
+          <span class="upload-status text-slate-400 whitespace-nowrap">Bekliyor...</span>
+        </div>
+        <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+          <div class="upload-bar h-full bg-indigo-500 rounded-full" style="width:0%"></div>
+        </div>
+      </div>`
+    );
+    return { file, el: document.getElementById(id) };
+  });
+
+  const results = [];
+  for (const { file, el } of items) {
+    const statusEl = el.querySelector(".upload-status");
+    const barEl = el.querySelector(".upload-bar");
+    statusEl.textContent = "Yükleniyor...";
+    statusEl.className = "upload-status text-indigo-600 whitespace-nowrap";
+    barEl.className = "upload-bar h-full bg-indigo-500 rounded-full upload-bar-indeterminate";
+    try {
+      const result = await uploadOne(file);
+      statusEl.textContent = "Tamamlandı";
+      statusEl.className = "upload-status text-emerald-600 whitespace-nowrap";
+      barEl.className = "upload-bar h-full bg-emerald-500 rounded-full";
+      barEl.style.width = "100%";
+      results.push({ file, result, error: null });
+    } catch (err) {
+      statusEl.textContent = "Hata";
+      statusEl.className = "upload-status text-rose-600 whitespace-nowrap";
+      barEl.className = "upload-bar h-full bg-rose-500 rounded-full";
+      barEl.style.width = "100%";
+      results.push({ file, result: null, error: err.message });
+    }
+  }
+  return results;
+}
+
 const api = {
   async health() {
     const res = await fetch("/api/health");

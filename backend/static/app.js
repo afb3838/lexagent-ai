@@ -193,6 +193,7 @@ async function submitNewDosya() {
 async function openDosyaPage(id) {
   if (currentDosyaId !== id) {
     mountWizard("wizard-mount-dosya", id);
+    document.getElementById("belge-upload-progress").innerHTML = "";
   }
   await refreshDosyaInfo(id);
 }
@@ -273,14 +274,18 @@ function synthesizeCaseDetails(belgeler) {
 async function handleBelgeUpload(e) {
   const files = e.target.files;
   if (!files.length) return;
-  showToast("Belgeler okunuyor...");
-  try {
-    await api.uploadBelgeler(currentDosyaId, files);
-    await refreshDosyaInfo(currentDosyaId);
-    showToast("Belgeler yüklendi.");
-  } catch (err) {
-    showToast("Belge yükleme hatası: " + err.message);
-  }
+  const dosyaId = currentDosyaId;
+
+  const results = await runUploadQueue(files, "belge-upload-progress", async (file) => {
+    const data = await api.uploadBelgeler(dosyaId, [file]);
+    const belge = data.belgeler[0];
+    if (belge.error) throw new Error(belge.error);
+    return belge;
+  });
+
+  await refreshDosyaInfo(dosyaId);
+  const failed = results.filter((r) => r.error).length;
+  showToast(failed ? `${results.length - failed}/${results.length} belge yüklendi, ${failed} hata.` : "Belgeler yüklendi.");
   e.target.value = "";
 }
 

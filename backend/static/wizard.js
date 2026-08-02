@@ -23,6 +23,7 @@ function mountWizard(containerId, dosyaId) {
 
   const standalone = !dosyaId;
   document.getElementById("standalone-upload-section").classList.toggle("hidden", !standalone);
+  document.getElementById("standalone-upload-progress").innerHTML = "";
   document.getElementById("save-to-dosya-research").classList.toggle("hidden", !standalone);
   document.getElementById("save-to-dosya-draft").classList.toggle("hidden", !standalone);
   if (standalone) {
@@ -36,16 +37,20 @@ function mountWizard(containerId, dosyaId) {
 async function handleStandaloneUpload(e) {
   const files = e.target.files;
   if (!files.length) return;
-  showToast("Dosyalar okunuyor...");
-  try {
-    const documents = await api.parseFiles(files);
-    standaloneDocs = standaloneDocs.concat(documents);
-    renderStandaloneFileList();
-    synthesizeStandaloneCaseDetails();
-    showToast("Belgeler okundu.");
-  } catch (err) {
-    showToast("Dosya okuma hatası: " + err.message);
-  }
+
+  const results = await runUploadQueue(files, "standalone-upload-progress", async (file) => {
+    const [doc] = await api.parseFiles([file]);
+    if (doc.error) throw new Error(doc.error);
+    return doc;
+  });
+
+  results.forEach((r) => {
+    if (r.result) standaloneDocs.push(r.result);
+  });
+  renderStandaloneFileList();
+  synthesizeStandaloneCaseDetails();
+  const failed = results.filter((r) => r.error).length;
+  showToast(failed ? `${results.length - failed}/${results.length} belge okundu, ${failed} hata.` : "Belgeler okundu.");
   e.target.value = "";
 }
 
