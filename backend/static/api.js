@@ -57,6 +57,12 @@ const api = {
     const res = await authedFetch(`/api/dosyalar/${dosyaId}/belgeler`, { method: "POST", body: fd });
     return res.json();
   },
+  async parseFiles(files) {
+    const fd = new FormData();
+    for (const f of files) fd.append("files", f);
+    const res = await authedFetch("/api/parse", { method: "POST", body: fd });
+    return (await res.json()).documents;
+  },
   async research(fields) {
     const res = await authedFetch("/api/research", { method: "POST", body: toFormData(fields) });
     return res.json();

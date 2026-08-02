@@ -222,6 +222,21 @@
 
   <!-- STEP 1 -->
   <div id="step-1" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
+    <div id="standalone-upload-section" class="hidden space-y-3">
+      <div>
+        <label class="block text-sm font-semibold mb-1">Belgeler</label>
+        <p class="text-xs text-slate-500 mb-2">.pdf veya .udf yükleyin, "Olay Özeti" alanı otomatik doldurulsun (birden fazla seçebilirsiniz).</p>
+      </div>
+      <div id="standalone-drop-zone" onclick="document.getElementById('standaloneFileInput').click()"
+           class="border-2 border-dashed border-indigo-200 bg-indigo-50/30 rounded-xl p-6 text-center hover:border-indigo-500 cursor-pointer">
+        <input type="file" id="standaloneFileInput" accept=".pdf,.udf" multiple class="hidden" onchange="handleStandaloneUpload(event)">
+        <i class="fa-solid fa-cloud-arrow-up text-2xl text-indigo-600 mb-2"></i>
+        <p class="text-sm font-semibold">Dosyaları seçmek için tıklayın</p>
+        <p class="text-xs text-slate-500">.pdf, .udf</p>
+      </div>
+      <div id="standalone-file-list" class="space-y-2"></div>
+    </div>
+
     <div class="grid md:grid-cols-2 gap-4">
       <div>
         <label class="block text-sm font-semibold mb-1">Görevli Mahkeme</label>

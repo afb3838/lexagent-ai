@@ -4,11 +4,13 @@
 let currentDosyaId = null;
 let lastResearchText = "";
 let lastDraftText = "";
+let standaloneDocs = [];
 
 function mountWizard(containerId, dosyaId) {
   currentDosyaId = dosyaId;
   lastResearchText = "";
   lastDraftText = "";
+  standaloneDocs = [];
   document.getElementById(containerId).appendChild(document.getElementById("wizard-root"));
 
   document.getElementById("caseSubject").value = "";
@@ -20,11 +22,55 @@ function mountWizard(containerId, dosyaId) {
   document.getElementById("draft-error").classList.add("hidden");
 
   const standalone = !dosyaId;
+  document.getElementById("standalone-upload-section").classList.toggle("hidden", !standalone);
   document.getElementById("save-to-dosya-research").classList.toggle("hidden", !standalone);
   document.getElementById("save-to-dosya-draft").classList.toggle("hidden", !standalone);
-  if (standalone) populateSaveDosyaSelects();
+  if (standalone) {
+    populateSaveDosyaSelects();
+    renderStandaloneFileList();
+  }
 
   switchTab(1);
+}
+
+async function handleStandaloneUpload(e) {
+  const files = e.target.files;
+  if (!files.length) return;
+  showToast("Dosyalar okunuyor...");
+  try {
+    const documents = await api.parseFiles(files);
+    standaloneDocs = standaloneDocs.concat(documents);
+    renderStandaloneFileList();
+    synthesizeStandaloneCaseDetails();
+    showToast("Belgeler okundu.");
+  } catch (err) {
+    showToast("Dosya okuma hatası: " + err.message);
+  }
+  e.target.value = "";
+}
+
+function removeStandaloneDoc(i) {
+  standaloneDocs.splice(i, 1);
+  renderStandaloneFileList();
+  synthesizeStandaloneCaseDetails();
+}
+
+function renderStandaloneFileList() {
+  const box = document.getElementById("standalone-file-list");
+  box.innerHTML = standaloneDocs
+    .map(
+      (d, i) => `
+    <div class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs">
+      <span><i class="fa-solid fa-file-lines text-indigo-600 mr-1"></i>${d.name}${d.error ? " (hata: " + d.error + ")" : ""}</span>
+      <button onclick="removeStandaloneDoc(${i})" class="text-rose-500"><i class="fa-solid fa-trash-can"></i></button>
+    </div>`
+    )
+    .join("");
+}
+
+function synthesizeStandaloneCaseDetails() {
+  const combined = standaloneDocs.map((d, i) => `--- EVRAK ${i + 1}: ${d.name} ---\n${d.text}`).join("\n\n");
+  document.getElementById("caseDetails").value = combined;
 }
 
 async function populateSaveDosyaSelects() {
