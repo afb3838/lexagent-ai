@@ -58,6 +58,71 @@ Aşağıdaki adımları sırayla takip edin. Toplam süre yaklaşık 20-30 dakik
 
 ---
 
+## ADIM 5 — Dosya Yönetimi ve Giriş için Supabase Kurulumu
+
+Uygulama artık "Dosya" (dava) bazlı çalışıyor: giriş yapmanız, dosya oluşturmanız ve
+belge yüklemeniz gerekiyor. Bunun için ücretsiz bir **Supabase** (veritabanı + kullanıcı girişi
++ dosya depolama) hesabı gerekir. Aşağıdaki adımları takip edin.
+
+### 5.1 — Supabase Projesi Oluşturun
+
+1. https://supabase.com adresine gidin, ücretsiz kayıt olun.
+2. **New Project** deyin, bir isim verin (örn. `lexagent-ai`), bir veritabanı şifresi belirleyin
+   (bir kenara not edin, ileride lazım olabilir), bölge olarak size yakın birini seçin.
+3. Proje oluşunca sol menüden **Project Settings → API** sayfasına gidin. Şu üç değeri not alın:
+   - **Project URL** (örn. `https://xxxxx.supabase.co`)
+   - **anon public** anahtarı (uzun bir metin, `eyJ...` ile başlar)
+   - **service_role** anahtarı (⚠️ bu GİZLİ bir anahtardır, GEMINI_API_KEY gibi asla tarayıcıya
+     veya koda YAZILMAZ, sadece Render'a env var olarak eklenecek)
+4. Aynı sayfada **JWT Settings** bölümüne bakın: **"Legacy JWT Secret"** diye bir alan görüyorsanız
+   onu da not alın (bu, ADIM 5.4'te `SUPABASE_JWT_SECRET` olarak kullanılacak). Görmüyorsanız
+   sorun değil, bu durumda o değişkeni Render'a hiç eklemeyeceksiniz.
+
+### 5.2 — Giriş İçin Tek Kullanıcı Oluşturun
+
+Uygulamada herkese açık kayıt (signup) ekranı YOK — sadece sizin (veya büronuzdaki) önceden
+oluşturulmuş hesapla giriş yapılır.
+
+1. Supabase panelinde sol menüden **Authentication → Users** sayfasına gidin.
+2. **Add user → Create new user** deyin, kendi e-posta adresinizi ve bir şifre belirleyin.
+   "Auto Confirm User" seçeneğini işaretleyin (e-posta doğrulama beklemeden giriş yapabilesiniz).
+
+### 5.3 — Veritabanı Şemasını ve Depolama Alanını Oluşturun
+
+1. Sol menüden **SQL Editor**'e gidin, **New query** deyin.
+2. Bu depodaki `supabase/schema.sql` dosyasının tüm içeriğini kopyalayıp yapıştırın, **Run**'a basın.
+3. Sol menüden **Storage**'a gidin, **New bucket** deyin, adını tam olarak `dosyalar` yazın,
+   **Public bucket** seçeneğini İŞARETLEMEYİN (private kalsın — yüklenen belgeler gizli olmalı).
+
+### 5.4 — Render'a Yeni Ortam Değişkenlerini Ekleyin
+
+Render panelinde uygulamanızın **Environment** sekmesine gidip şunları ekleyin:
+
+- `SUPABASE_URL` → 5.1'de aldığınız Project URL
+- `SUPABASE_SERVICE_ROLE_KEY` → 5.1'de aldığınız service_role anahtarı
+- `SUPABASE_JWT_SECRET` → 5.1'de "Legacy JWT Secret" gördüyseniz onu ekleyin; görmediyseniz
+  bu değişkeni hiç eklemeyin (sistem otomatik olarak JWKS yöntemine geçer).
+
+**Save, rebuild and deploy** deyip yeniden yayınlayın.
+
+### 5.5 — Frontend'e Supabase Bilgilerini Ekleyin
+
+`backend/static/api.js` dosyasını açın, en üstteki iki satırı kendi bilgilerinizle değiştirin:
+
+```js
+const SUPABASE_URL = "https://xxxxx.supabase.co";   // kendi Project URL'niz
+const SUPABASE_ANON_KEY = "eyJ...";                  // kendi anon public anahtarınız
+```
+
+(`anon` anahtarı public bir anahtardır, tarayıcıda görünmesi güvenlidir — `service_role`
+anahtarıyla karıştırmayın, o asla buraya yazılmaz.)
+
+Değişikliği GitHub'a yükleyip Render'ın yeniden deploy etmesini bekleyin (veya Render'da
+**Manual Deploy** deyin). Ardından sitenizi açıp 5.2'de oluşturduğunuz e-posta/şifre ile
+giriş yapabilir, "Yeni Dosya" ile ilk dava dosyanızı oluşturabilirsiniz.
+
+---
+
 ## Bilinmesi Gerekenler / Sınırlamalar
 
 - **Ücretsiz Render planı** belirli bir süre kullanılmayınca "uyur"; ilk açılışta 30-60 saniye gecikme normaldir.

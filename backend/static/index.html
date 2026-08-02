@@ -3,9 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LexAgent AI - Emsal Karar Araştırma ve Dilekçe Ajanı</title>
+<title>LexAgent AI - Dosya Yönetimi</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <style>
   .custom-scrollbar::-webkit-scrollbar{width:6px}
   .custom-scrollbar::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}
@@ -15,131 +16,222 @@
 
 <header class="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-50">
   <div class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
-    <div class="flex items-center space-x-3">
+    <div class="flex items-center space-x-3 cursor-pointer" onclick="goToDashboard()">
       <div class="bg-indigo-600 p-2 rounded-lg"><i class="fa-solid fa-scale-balanced text-xl"></i></div>
       <div>
         <h1 class="font-bold text-lg leading-tight">LexAgent AI</h1>
         <p class="text-xs text-slate-400">Sunucu taraflı Gemini entegrasyonu — API anahtarı tarayıcıda değil</p>
       </div>
     </div>
-    <span id="health-badge" class="text-xs px-2.5 py-1 rounded-full bg-slate-800 text-slate-400">Kontrol ediliyor...</span>
+    <div class="flex items-center space-x-3">
+      <span id="health-badge" class="text-xs px-2.5 py-1 rounded-full bg-slate-800 text-slate-400">Kontrol ediliyor...</span>
+      <span id="user-email" class="hidden text-xs text-slate-400"></span>
+      <button id="logout-btn" onclick="handleLogout()" class="hidden text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg">
+        <i class="fa-solid fa-right-from-bracket mr-1"></i>Çıkış
+      </button>
+    </div>
   </div>
 </header>
 
 <main class="max-w-5xl mx-auto p-4 sm:p-8 space-y-6">
 
-  <div class="grid grid-cols-3 gap-2 bg-slate-200 p-1.5 rounded-xl text-sm font-medium">
-    <button id="tab-1" onclick="switchTab(1)" class="py-2.5 rounded-lg bg-white shadow-sm text-indigo-700">1. Belgeler & Talep</button>
-    <button id="tab-2" onclick="switchTab(2)" class="py-2.5 rounded-lg text-slate-600">2. Emsal Araştırma</button>
-    <button id="tab-3" onclick="switchTab(3)" class="py-2.5 rounded-lg text-slate-600">3. Dilekçe</button>
+  <!-- LOGIN VIEW -->
+  <div id="view-login" class="hidden max-w-sm mx-auto bg-white rounded-2xl border border-slate-200 shadow-sm p-8 mt-12 space-y-4">
+    <h2 class="text-xl font-bold text-center">Giriş Yap</h2>
+    <div>
+      <label class="block text-sm font-semibold mb-1">E-posta</label>
+      <input id="login-email" type="email" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+    </div>
+    <div>
+      <label class="block text-sm font-semibold mb-1">Şifre</label>
+      <input id="login-password" type="password" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+    </div>
+    <div id="login-error" class="hidden text-xs text-rose-600"></div>
+    <button onclick="handleLogin()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-lg">
+      Giriş Yap
+    </button>
   </div>
 
-  <!-- STEP 1 -->
-  <div id="step-1" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
-    <div>
-      <h2 class="text-xl font-bold">Dava Evrakları</h2>
-      <p class="text-sm text-slate-500 mt-1">.pdf veya .udf dosyalarınızı yükleyin (birden fazla seçebilirsiniz).</p>
-    </div>
-
-    <div id="drop-zone" onclick="document.getElementById('fileInput').click()"
-         class="border-2 border-dashed border-indigo-200 bg-indigo-50/30 rounded-xl p-6 text-center hover:border-indigo-500 cursor-pointer">
-      <input type="file" id="fileInput" accept=".pdf,.udf" multiple class="hidden" onchange="handleFiles(event)">
-      <i class="fa-solid fa-cloud-arrow-up text-2xl text-indigo-600 mb-2"></i>
-      <p class="text-sm font-semibold">Dosyaları seçmek için tıklayın</p>
-      <p class="text-xs text-slate-500">.pdf, .udf</p>
-    </div>
-
-    <div id="fileList" class="space-y-2 hidden"></div>
-
-    <div class="grid md:grid-cols-2 gap-4">
-      <div>
-        <label class="block text-sm font-semibold mb-1">Görevli Mahkeme</label>
-        <select id="courtType" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
-          <option>Nöbetçi Asliye Hukuk Mahkemesi</option>
-          <option>Nöbetçi İş Mahkemesi</option>
-          <option>Nöbetçi Tüketici Mahkemesi</option>
-          <option>Nöbetçi Aile Mahkemesi</option>
-          <option>Nöbetçi Sulh Hukuk Mahkemesi</option>
-          <option>Nöbetçi İdare Mahkemesi</option>
-          <option>Nöbetçi Asliye Ticaret Mahkemesi</option>
-          <option>Nöbetçi İcra Hukuk Mahkemesi</option>
-        </select>
-      </div>
-      <div>
-        <label class="block text-sm font-semibold mb-1">Taraf Rolü</label>
-        <select id="partyRole" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
-          <option>Davacı / Talep Eden</option>
-          <option>Davalı / Cevap Veren</option>
-          <option>Müşteki / Şikayetçi</option>
-          <option>İtiraz Eden / Temyiz Eden</option>
-        </select>
-      </div>
-    </div>
-
-    <div>
-      <label class="block text-sm font-semibold mb-1">Dava Konusu</label>
-      <input id="caseSubject" type="text" placeholder="Örn: Kıdem ve İhbar Tazminatı Alacağı"
-             class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
-    </div>
-
-    <div>
-      <div class="flex items-center justify-between mb-1">
-        <label class="text-sm font-semibold">Olay Özeti / Evrak İçeriği</label>
-      </div>
-      <textarea id="caseDetails" rows="6" placeholder="Dosya yüklediğinizde otomatik doldurulur; elle de yazabilirsiniz."
-                class="w-full bg-slate-50 border border-slate-300 rounded-lg p-3 text-sm custom-scrollbar"></textarea>
-    </div>
-
-    <div class="bg-indigo-50/50 border border-indigo-100 rounded-xl p-4 space-y-2">
-      <label class="block text-sm font-bold text-indigo-900"><i class="fa-solid fa-pen-nib mr-1"></i> Ajandan İsteğiniz</label>
-      <input id="instruction" type="text" placeholder="Örn: Davaya cevap dilekçesi olsun, zamanaşımı itirazı vurgulansın."
-             class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
-    </div>
-
-    <div class="flex justify-end">
-      <button onclick="startResearch()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-lg">
-        Emsal Araştırmayı Başlat <i class="fa-solid fa-arrow-right ml-1"></i>
+  <!-- DASHBOARD VIEW -->
+  <div id="view-dashboard" class="hidden space-y-6">
+    <div class="flex items-center justify-between">
+      <h2 class="text-xl font-bold">Dosyalarım</h2>
+      <button onclick="openNewDosyaForm()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-5 rounded-lg">
+        <i class="fa-solid fa-plus mr-1"></i> Yeni Dosya
       </button>
     </div>
-  </div>
 
-  <!-- STEP 2 -->
-  <div id="step-2" class="hidden space-y-6">
-    <div id="research-loading" class="hidden bg-white rounded-2xl border border-slate-200 shadow-sm p-12 text-center">
-      <i class="fa-solid fa-magnifying-glass-chart text-2xl text-indigo-600 mb-3 animate-bounce"></i>
-      <h3 class="font-bold">Gerçek kaynaklar taranıyor...</h3>
-      <p class="text-sm text-slate-500 mt-1">Bu 15-30 saniye sürebilir.</p>
-    </div>
-    <div id="research-error" class="hidden bg-rose-50 border border-rose-200 text-rose-700 rounded-xl p-4 text-sm"></div>
-    <div id="research-results" class="hidden space-y-4">
-      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="font-bold text-lg">Araştırma Sonucu</h3>
-          <button onclick="goToDraft()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-4 py-2 rounded-lg">
-            Bu Kararlarla Dilekçeyi Oluştur
-          </button>
+    <div id="new-dosya-form" class="hidden bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+      <h3 class="font-bold">Yeni Dosya</h3>
+      <div class="grid md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-semibold mb-1">Müvekkil Adı *</label>
+          <input id="new-muvekkil" type="text" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
         </div>
-        <div id="research-sources" class="flex flex-wrap gap-2 mb-4"></div>
-        <div id="research-text" class="prose prose-sm max-w-none whitespace-pre-wrap text-sm leading-relaxed"></div>
+        <div>
+          <label class="block text-sm font-semibold mb-1">Karşı Taraf</label>
+          <input id="new-karsi-taraf" type="text" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+        </div>
+        <div>
+          <label class="block text-sm font-semibold mb-1">Mahkeme</label>
+          <input id="new-mahkeme" type="text" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+        </div>
+        <div>
+          <label class="block text-sm font-semibold mb-1">Esas No</label>
+          <input id="new-esas-no" type="text" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+        </div>
+        <div>
+          <label class="block text-sm font-semibold mb-1">Dava Türü</label>
+          <input id="new-dava-turu" type="text" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+        </div>
+        <div>
+          <label class="block text-sm font-semibold mb-1">Açılış Tarihi</label>
+          <input id="new-acilis-tarihi" type="date" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+        </div>
+      </div>
+      <div class="flex justify-end space-x-2">
+        <button onclick="closeNewDosyaForm()" class="text-sm px-4 py-2.5 rounded-lg border border-slate-300">Vazgeç</button>
+        <button onclick="submitNewDosya()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-2.5 px-5 rounded-lg">Oluştur</button>
       </div>
     </div>
+
+    <div id="dosya-list" class="space-y-2"></div>
   </div>
 
-  <!-- STEP 3 -->
-  <div id="step-3" class="hidden space-y-6">
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-xl font-bold">Dilekçe Taslağı</h2>
-        <button onclick="copyPetition()" class="bg-slate-100 hover:bg-slate-200 text-xs font-semibold px-4 py-2 rounded-lg border border-slate-300">
-          <i class="fa-solid fa-copy mr-1"></i> Kopyala
+  <!-- DOSYA DETAIL VIEW -->
+  <div id="view-dosya" class="hidden space-y-6">
+    <button onclick="goToDashboard()" class="text-sm text-slate-500 hover:text-indigo-600">
+      <i class="fa-solid fa-arrow-left mr-1"></i> Dosyalarıma dön
+    </button>
+
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-3">
+      <div class="flex items-center justify-between">
+        <h2 id="dosya-title" class="text-xl font-bold"></h2>
+        <select id="dosya-durum" onchange="updateDurum()" class="text-sm border border-slate-300 rounded-lg px-3 py-2">
+          <option value="acildi">Açıldı</option>
+          <option value="bilirkisi_bekleniyor">Bilirkişi Bekleniyor</option>
+          <option value="durusma_bekleniyor">Duruşma Bekleniyor</option>
+          <option value="karar_cikti">Karar Çıktı</option>
+          <option value="temyiz">Temyiz</option>
+          <option value="kesinlesti">Kesinleşti</option>
+        </select>
+      </div>
+      <div id="dosya-meta" class="text-sm text-slate-500 grid sm:grid-cols-2 gap-1"></div>
+      <div id="dosya-ozet" class="bg-indigo-50/50 border border-indigo-100 rounded-xl p-4 text-sm hidden">
+        <p class="font-bold text-indigo-900 mb-1"><i class="fa-solid fa-file-lines mr-1"></i>Son Durum Özeti</p>
+        <p id="dosya-ozet-text" class="whitespace-pre-wrap"></p>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+      <h3 class="font-bold">Belgeler</h3>
+      <div id="belge-drop-zone" onclick="document.getElementById('belgeFileInput').click()"
+           class="border-2 border-dashed border-indigo-200 bg-indigo-50/30 rounded-xl p-6 text-center hover:border-indigo-500 cursor-pointer">
+        <input type="file" id="belgeFileInput" accept=".pdf,.udf" multiple class="hidden" onchange="handleBelgeUpload(event)">
+        <i class="fa-solid fa-cloud-arrow-up text-2xl text-indigo-600 mb-2"></i>
+        <p class="text-sm font-semibold">Belge yüklemek için tıklayın (.pdf, .udf)</p>
+      </div>
+      <div id="belge-list" class="space-y-2"></div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-2 bg-slate-200 p-1.5 rounded-xl text-sm font-medium">
+      <button id="tab-1" onclick="switchTab(1)" class="py-2.5 rounded-lg bg-white shadow-sm text-indigo-700">1. Talep</button>
+      <button id="tab-2" onclick="switchTab(2)" class="py-2.5 rounded-lg text-slate-600">2. Emsal Araştırma</button>
+      <button id="tab-3" onclick="switchTab(3)" class="py-2.5 rounded-lg text-slate-600">3. Dilekçe</button>
+    </div>
+
+    <!-- STEP 1 -->
+    <div id="step-1" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
+      <div class="grid md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-semibold mb-1">Görevli Mahkeme</label>
+          <select id="courtType" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+            <option>Nöbetçi Asliye Hukuk Mahkemesi</option>
+            <option>Nöbetçi İş Mahkemesi</option>
+            <option>Nöbetçi Tüketici Mahkemesi</option>
+            <option>Nöbetçi Aile Mahkemesi</option>
+            <option>Nöbetçi Sulh Hukuk Mahkemesi</option>
+            <option>Nöbetçi İdare Mahkemesi</option>
+            <option>Nöbetçi Asliye Ticaret Mahkemesi</option>
+            <option>Nöbetçi İcra Hukuk Mahkemesi</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold mb-1">Taraf Rolü</label>
+          <select id="partyRole" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+            <option>Davacı / Talep Eden</option>
+            <option>Davalı / Cevap Veren</option>
+            <option>Müşteki / Şikayetçi</option>
+            <option>İtiraz Eden / Temyiz Eden</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-sm font-semibold mb-1">Dava Konusu</label>
+        <input id="caseSubject" type="text" placeholder="Örn: Kıdem ve İhbar Tazminatı Alacağı"
+               class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+      </div>
+
+      <div>
+        <div class="flex items-center justify-between mb-1">
+          <label class="text-sm font-semibold">Olay Özeti / Evrak İçeriği</label>
+        </div>
+        <textarea id="caseDetails" rows="6" placeholder="Yukarıda yüklediğiniz belgelerden otomatik doldurulur; elle de düzenleyebilirsiniz."
+                  class="w-full bg-slate-50 border border-slate-300 rounded-lg p-3 text-sm custom-scrollbar"></textarea>
+      </div>
+
+      <div class="bg-indigo-50/50 border border-indigo-100 rounded-xl p-4 space-y-2">
+        <label class="block text-sm font-bold text-indigo-900"><i class="fa-solid fa-pen-nib mr-1"></i> Ajandan İsteğiniz</label>
+        <input id="instruction" type="text" placeholder="Örn: Davaya cevap dilekçesi olsun, zamanaşımı itirazı vurgulansın."
+               class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+      </div>
+
+      <div class="flex justify-end">
+        <button onclick="startResearch()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-lg">
+          Emsal Araştırmayı Başlat <i class="fa-solid fa-arrow-right ml-1"></i>
         </button>
       </div>
-      <div id="draft-loading" class="hidden text-center py-12 text-slate-500">
-        <i class="fa-solid fa-spinner animate-spin text-2xl text-indigo-600 mb-3"></i>
-        <p>Dilekçe kaleme alınıyor...</p>
+    </div>
+
+    <!-- STEP 2 -->
+    <div id="step-2" class="hidden space-y-6">
+      <div id="research-loading" class="hidden bg-white rounded-2xl border border-slate-200 shadow-sm p-12 text-center">
+        <i class="fa-solid fa-magnifying-glass-chart text-2xl text-indigo-600 mb-3 animate-bounce"></i>
+        <h3 class="font-bold">Gerçek kaynaklar taranıyor...</h3>
+        <p class="text-sm text-slate-500 mt-1">Bu 15-30 saniye sürebilir.</p>
       </div>
-      <div id="draft-error" class="hidden bg-rose-50 border border-rose-200 text-rose-700 rounded-xl p-4 text-sm"></div>
-      <div id="petition-canvas" class="hidden bg-amber-50/20 border border-slate-200 rounded-xl p-6 sm:p-10 font-serif text-sm leading-relaxed whitespace-pre-wrap custom-scrollbar max-h-[700px] overflow-y-auto"></div>
+      <div id="research-error" class="hidden bg-rose-50 border border-rose-200 text-rose-700 rounded-xl p-4 text-sm"></div>
+      <div id="research-results" class="hidden space-y-4">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-lg">Araştırma Sonucu</h3>
+            <button onclick="goToDraft()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-4 py-2 rounded-lg">
+              Bu Kararlarla Dilekçeyi Oluştur
+            </button>
+          </div>
+          <div id="research-sources" class="flex flex-wrap gap-2 mb-4"></div>
+          <div id="research-text" class="prose prose-sm max-w-none whitespace-pre-wrap text-sm leading-relaxed"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div id="step-3" class="hidden space-y-6">
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xl font-bold">Dilekçe Taslağı</h2>
+          <button onclick="copyPetition()" class="bg-slate-100 hover:bg-slate-200 text-xs font-semibold px-4 py-2 rounded-lg border border-slate-300">
+            <i class="fa-solid fa-copy mr-1"></i> Kopyala
+          </button>
+        </div>
+        <div id="draft-loading" class="hidden text-center py-12 text-slate-500">
+          <i class="fa-solid fa-spinner animate-spin text-2xl text-indigo-600 mb-3"></i>
+          <p>Dilekçe kaleme alınıyor...</p>
+        </div>
+        <div id="draft-error" class="hidden bg-rose-50 border border-rose-200 text-rose-700 rounded-xl p-4 text-sm"></div>
+        <div id="petition-canvas" class="hidden bg-amber-50/20 border border-slate-200 rounded-xl p-6 sm:p-10 font-serif text-sm leading-relaxed whitespace-pre-wrap custom-scrollbar max-h-[700px] overflow-y-auto"></div>
+      </div>
     </div>
   </div>
 
@@ -147,149 +239,7 @@
 
 <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-xl transform translate-y-20 opacity-0 transition-all duration-300 z-50 text-sm"></div>
 
-<script>
-let uploadedDocs = [];
-let lastResearchText = "";
-
-fetch('/api/health').then(r => r.json()).then(d => {
-  const badge = document.getElementById('health-badge');
-  if (d.api_key_configured) {
-    badge.textContent = 'Sunucu hazır (' + d.model + ')';
-    badge.className = 'text-xs px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400';
-  } else {
-    badge.textContent = 'GEMINI_API_KEY tanımlı değil';
-    badge.className = 'text-xs px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-400';
-  }
-}).catch(() => {});
-
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.remove('translate-y-20', 'opacity-0');
-  setTimeout(() => t.classList.add('translate-y-20', 'opacity-0'), 3000);
-}
-
-function switchTab(n) {
-  [1,2,3].forEach(i => {
-    document.getElementById('tab-'+i).className = i===n
-      ? 'py-2.5 rounded-lg bg-white shadow-sm text-indigo-700 font-semibold'
-      : 'py-2.5 rounded-lg text-slate-600';
-    document.getElementById('step-'+i).classList.toggle('hidden', i!==n);
-  });
-}
-
-async function handleFiles(e) {
-  const files = e.target.files;
-  if (!files.length) return;
-  const fd = new FormData();
-  for (const f of files) fd.append('files', f);
-  showToast('Dosyalar okunuyor...');
-  try {
-    const res = await fetch('/api/parse', { method: 'POST', body: fd });
-    const data = await res.json();
-    uploadedDocs = uploadedDocs.concat(data.documents);
-    renderFileList();
-    synthesize();
-    showToast('Belgeler okundu.');
-  } catch (err) {
-    showToast('Dosya okuma hatası: ' + err.message);
-  }
-}
-
-function renderFileList() {
-  const box = document.getElementById('fileList');
-  box.classList.toggle('hidden', uploadedDocs.length === 0);
-  box.innerHTML = uploadedDocs.map((d, i) => `
-    <div class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs">
-      <span><i class="fa-solid fa-file-lines text-indigo-600 mr-1"></i>${d.name}${d.error ? ' (hata: '+d.error+')' : ''}</span>
-      <button onclick="removeDoc(${i})" class="text-rose-500"><i class="fa-solid fa-trash-can"></i></button>
-    </div>`).join('');
-}
-
-function removeDoc(i) { uploadedDocs.splice(i,1); renderFileList(); synthesize(); }
-
-function synthesize() {
-  const combined = uploadedDocs.map((d, i) => `--- EVRAK ${i+1}: ${d.name} ---\n${d.text}`).join('\n\n');
-  document.getElementById('caseDetails').value = combined;
-}
-
-async function startResearch() {
-  const caseSubject = document.getElementById('caseSubject').value.trim();
-  const caseDetails = document.getElementById('caseDetails').value.trim();
-  if (!caseSubject || !caseDetails) {
-    showToast('Lütfen dava konusu ve olay özetini doldurun.');
-    return;
-  }
-  switchTab(2);
-  document.getElementById('research-loading').classList.remove('hidden');
-  document.getElementById('research-results').classList.add('hidden');
-  document.getElementById('research-error').classList.add('hidden');
-
-  const fd = new FormData();
-  fd.append('case_subject', caseSubject);
-  fd.append('court_type', document.getElementById('courtType').value);
-  fd.append('party_role', document.getElementById('partyRole').value);
-  fd.append('case_details', caseDetails);
-  fd.append('instruction', document.getElementById('instruction').value);
-
-  try {
-    const res = await fetch('/api/research', { method: 'POST', body: fd });
-    if (!res.ok) throw new Error(await res.text());
-    const data = await res.json();
-    lastResearchText = data.result;
-    document.getElementById('research-text').textContent = data.result;
-    const srcBox = document.getElementById('research-sources');
-    srcBox.innerHTML = data.sources.length
-      ? data.sources.map(s => `<a href="${s.uri}" target="_blank" class="text-xs bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 px-2.5 py-1 rounded-md border border-slate-200"><i class="fa-solid fa-link mr-1"></i>${s.title.substring(0,40)}</a>`).join('')
-      : '<span class="text-xs text-slate-400">Kaynak künyesi dönmedi.</span>';
-    document.getElementById('research-loading').classList.add('hidden');
-    document.getElementById('research-results').classList.remove('hidden');
-  } catch (err) {
-    document.getElementById('research-loading').classList.add('hidden');
-    const errBox = document.getElementById('research-error');
-    errBox.textContent = 'Hata: ' + err.message;
-    errBox.classList.remove('hidden');
-  }
-}
-
-async function goToDraft() {
-  switchTab(3);
-  document.getElementById('draft-loading').classList.remove('hidden');
-  document.getElementById('petition-canvas').classList.add('hidden');
-  document.getElementById('draft-error').classList.add('hidden');
-
-  const fd = new FormData();
-  fd.append('case_subject', document.getElementById('caseSubject').value.trim());
-  fd.append('court_type', document.getElementById('courtType').value);
-  fd.append('party_role', document.getElementById('partyRole').value);
-  fd.append('case_details', document.getElementById('caseDetails').value.trim());
-  fd.append('instruction', document.getElementById('instruction').value);
-  fd.append('precedents', lastResearchText);
-
-  try {
-    const res = await fetch('/api/draft', { method: 'POST', body: fd });
-    if (!res.ok) throw new Error(await res.text());
-    const data = await res.json();
-    const canvas = document.getElementById('petition-canvas');
-    canvas.textContent = data.petition;
-    document.getElementById('draft-loading').classList.add('hidden');
-    canvas.classList.remove('hidden');
-  } catch (err) {
-    document.getElementById('draft-loading').classList.add('hidden');
-    const errBox = document.getElementById('draft-error');
-    errBox.textContent = 'Hata: ' + err.message;
-    errBox.classList.remove('hidden');
-  }
-}
-
-function copyPetition() {
-  const text = document.getElementById('petition-canvas').textContent;
-  if (!text) { showToast('Kopyalanacak metin yok.'); return; }
-  navigator.clipboard.writeText(text);
-  showToast('Panoya kopyalandı.');
-}
-
-switchTab(1);
-</script>
+<script src="api.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
