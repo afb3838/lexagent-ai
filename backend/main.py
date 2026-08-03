@@ -647,7 +647,7 @@ async def create_icra(
     alacakli_adi: str = Form(...),
     takip_no: Optional[str] = Form(None),
     icra_dairesi: Optional[str] = Form(None),
-    takip_tutari: Optional[float] = Form(None),
+    takip_tutari: Optional[str] = Form(None),
     dosya_id: Optional[str] = Form(None),
     user: dict = Depends(get_current_user),
 ):
@@ -660,7 +660,7 @@ async def create_icra(
         "alacakli_adi": alacakli_adi,
         "takip_no": takip_no or None,
         "icra_dairesi": icra_dairesi or None,
-        "takip_tutari": takip_tutari,
+        "takip_tutari": float(takip_tutari) if takip_tutari else None,
     }
     return await db.insert("icra_dosyalari", row)
 
@@ -692,7 +692,7 @@ async def patch_icra(
     alacakli_adi: Optional[str] = Form(None),
     takip_no: Optional[str] = Form(None),
     icra_dairesi: Optional[str] = Form(None),
-    takip_tutari: Optional[float] = Form(None),
+    takip_tutari: Optional[str] = Form(None),
     durum: Optional[str] = Form(None),
     user: dict = Depends(get_current_user),
 ):
@@ -704,7 +704,7 @@ async def patch_icra(
             "alacakli_adi": alacakli_adi,
             "takip_no": takip_no,
             "icra_dairesi": icra_dairesi,
-            "takip_tutari": takip_tutari,
+            "takip_tutari": float(takip_tutari) if takip_tutari else None,
             "durum": durum,
         }.items()
         if v is not None
@@ -721,7 +721,7 @@ async def create_icra_adim(
     tarih: str = Form(...),
     tur: str = Form("diger"),
     aciklama: Optional[str] = Form(None),
-    tutar: Optional[float] = Form(None),
+    tutar: Optional[str] = Form(None),
     user: dict = Depends(get_current_user),
 ):
     await get_owned_icra(icra_id, user["id"])
@@ -730,7 +730,7 @@ async def create_icra_adim(
         "tarih": tarih,
         "tur": tur,
         "aciklama": aciklama or None,
-        "tutar": tutar,
+        "tutar": float(tutar) if tutar else None,
     }
     return await db.insert("icra_adimlari", row)
 
