@@ -209,7 +209,7 @@ const api = {
   },
   async searchMevzuat(q) {
     const res = await authedFetch(`/api/mevzuat?q=${encodeURIComponent(q || "")}`);
-    return (await res.json()).mevzuat;
+    return res.json();
   },
   async createPaylasimLinki(dosyaId) {
     const res = await authedFetch(`/api/dosyalar/${dosyaId}/paylasim-linki`, { method: "POST" });

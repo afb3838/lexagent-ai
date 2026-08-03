@@ -114,16 +114,35 @@ async function submitCariHesapKaydi() {
 }
 
 // ---------------------------------------------------------------------------
-// AAUT ucret hesaplayici — ORNEK/yaklasik oran tablosu, gercek AAUT DEGIL.
-// Gercek oranlar her yil Resmi Gazete'de yayimlanir; bu tablo sadece
-// hesaplayicinin nasil calisacagini gostermek icin ornek amaclidir.
+// AAUT ucret hesaplayici — 2025-2026 Avukatlik Asgari Ucret Tarifesi'nin
+// (Resmi Gazete Sayi: 33067, Tarih: 04.11.2025) nispi vekalet ucreti dilim
+// tablosuna dayanir. Iki bagimsiz kaynaktan capraz dogrulanmistir. Yine de
+// yillik degisebildigi ve tam metnin istisna/ozel durumlar icerebilecegi
+// icin sonuc mutlaka Resmi Gazete metniyle karsilastirilmalidir.
 // ---------------------------------------------------------------------------
-const AAUT_ORNEK_DILIMLER = [
-  { limit: 50000, oran: 0.16 },
-  { limit: 100000, oran: 0.15 },
-  { limit: 250000, oran: 0.14 },
-  { limit: 500000, oran: 0.1 },
-  { limit: Infinity, oran: 0.08 },
+const AAUT_KAYNAK_URL = "https://www.resmigazete.gov.tr/eskiler/2025/11/20251104-9-1.pdf";
+const AAUT_DILIMLERI = [
+  { limit: 600000, oran: 0.16 },
+  { limit: 1200000, oran: 0.15 },
+  { limit: 2400000, oran: 0.14 },
+  { limit: 3600000, oran: 0.13 },
+  { limit: 5400000, oran: 0.11 },
+  { limit: 7800000, oran: 0.08 },
+  { limit: 10800000, oran: 0.05 },
+  { limit: 14400000, oran: 0.03 },
+  { limit: 18600000, oran: 0.02 },
+  { limit: Infinity, oran: 0.01 },
+];
+
+const AAUT_MAKTU_UCRETLER = [
+  { ad: "İcra dairelerinde takip (maktu, asıl alacağı geçemez)", tutar: 9000 },
+  { ad: "Tahliyeye ilişkin icra takibi", tutar: 20000 },
+  { ad: "Dilekçe / ihtarname düzenlenmesi", tutar: 6500 },
+  { ad: "Kira sözleşmesi hazırlanması", tutar: 8000 },
+  { ad: "Büroda sözlü danışma (ilk saat)", tutar: 4000 },
+  { ad: "İlk derece mahkemelerinde (duruşmalı) takip", tutar: 45000 },
+  { ad: "Boşanma davası (asgari)", tutar: 45000 },
+  { ad: "İdare/vergi mahkemesi (duruşmasız)", tutar: 30000 },
 ];
 
 function hesaplaAAUT() {
@@ -137,7 +156,7 @@ function hesaplaAAUT() {
   let alt = 0;
   let toplam = 0;
   const satirlar = [];
-  for (const dilim of AAUT_ORNEK_DILIMLER) {
+  for (const dilim of AAUT_DILIMLERI) {
     if (kalan <= 0) break;
     const dilimGenisligi = dilim.limit - alt;
     const buDilim = Math.min(kalan, dilimGenisligi);
@@ -147,10 +166,17 @@ function hesaplaAAUT() {
     kalan -= buDilim;
     alt = dilim.limit;
   }
+  const maktuHtml = AAUT_MAKTU_UCRETLER.map((m) => `<li>${m.ad}: <strong>${formatTL(m.tutar)}</strong></li>`).join("");
   box.innerHTML = `
-    <p class="font-bold text-indigo-900 mb-2">Tahmini Ücret: ${formatTL(toplam)}</p>
-    <p class="text-xs text-slate-500 mb-2">Örnek dilimli hesaplama (gerçek AAÜT oranları değildir):</p>
-    <ul class="text-xs text-slate-600 list-disc list-inside space-y-0.5">${satirlar.map((s) => `<li>${s}</li>`).join("")}</ul>
+    <p class="font-bold text-indigo-900 mb-2">Nispi Vekalet Ücreti (tahmini): ${formatTL(toplam)}</p>
+    <p class="text-xs text-slate-500 mb-2">Dilim hesaplaması:</p>
+    <ul class="text-xs text-slate-600 list-disc list-inside space-y-0.5 mb-3">${satirlar.map((s) => `<li>${s}</li>`).join("")}</ul>
+    <p class="text-xs font-semibold text-slate-700 mb-1">Sık kullanılan maktu ücretler (2025-2026):</p>
+    <ul class="text-xs text-slate-600 list-disc list-inside space-y-0.5 mb-3">${maktuHtml}</ul>
+    <p class="text-xs text-slate-400 border-t border-slate-100 pt-2">
+      Kaynak: 2025-2026 Avukatlık Asgari Ücret Tarifesi, Resmi Gazete Sayı: 33067, 04.11.2025 —
+      <a href="${AAUT_KAYNAK_URL}" target="_blank" class="text-indigo-600 hover:underline">tam metin <i class="fa-solid fa-arrow-up-right-from-square ml-0.5"></i></a>
+    </p>
   `;
   box.classList.remove("hidden");
 }

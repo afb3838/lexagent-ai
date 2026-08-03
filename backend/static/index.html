@@ -212,6 +212,7 @@
               <div class="md:col-span-2">
                 <label class="block text-sm font-semibold mb-1">Taranmış Belge (isteğe bağlı)</label>
                 <input id="vekaletname-dosya" type="file" accept=".pdf,.jpg,.jpeg,.png" class="w-full text-sm">
+                <p class="text-xs text-slate-500 mt-1">Görüntü tabanlı (taranmış) belgeler otomatik olarak okunur ve tarih/özel yetki alanları boşsa doldurulur.</p>
               </div>
               <div class="md:col-span-2">
                 <label class="block text-sm font-semibold mb-1">Notlar</label>
@@ -332,7 +333,7 @@
           <h3 class="font-bold">AAÜT Ücret Hesaplayıcı</h3>
           <div class="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 text-sm text-amber-900 flex items-start gap-2">
             <i class="fa-solid fa-triangle-exclamation mt-0.5"></i>
-            <span><strong>Bu hesaplayıcı yardımcı bir araçtır, örnek/yaklaşık oranlar kullanır.</strong> Gerçek ücreti mutlaka güncel AAÜT (Resmi Gazete) ile karşılaştırıp kendiniz doğrulayın.</span>
+            <span><strong>Bu hesaplayıcı yardımcı bir araçtır.</strong> 2025-2026 AAÜT'nin genel nispi ücret tarifesine dayanır; istisnai/özel durumlar (KDV, taraf sayısı, özel tarifeler vb.) içermeyebilir. Sonucu mutlaka güncel Resmi Gazete metniyle karşılaştırıp kendiniz doğrulayın.</span>
           </div>
           <div class="grid md:grid-cols-2 gap-4 items-end">
             <div>
@@ -450,15 +451,15 @@
         </div>
       </div>
 
-      <!-- PAGE: Mevzuat (iskelet + ornek veri) -->
+      <!-- PAGE: Mevzuat (canli arama) -->
       <div id="page-mevzuat" class="page hidden space-y-6">
         <div class="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 text-sm text-amber-900 flex items-start gap-2">
           <i class="fa-solid fa-triangle-exclamation mt-0.5"></i>
-          <span><strong>Bu bir iskelet/demodur.</strong> Küçük bir örnek veri seti içerir; tam mevzuat.gov.tr / Resmi Gazete entegrasyonu ayrı bir çalışmadır. Sonuçları mutlaka resmi kaynaktan doğrulayın.</span>
+          <span><strong>Bu arama internetten canlı olarak mevzuat.gov.tr / Resmi Gazete kaynaklı sonuçlar getirir.</strong> Sonuçları mutlaka resmi kaynaktan teyit edin; sistem doğrulayamadığı bir sonucu uydurmamak için bunu açıkça belirtecek şekilde talimatlandırılmıştır.</span>
         </div>
         <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
           <div class="flex gap-2">
-            <input id="mevzuat-arama" type="text" placeholder="Kanun adı veya kategori ara..." class="flex-1 bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm" onkeydown="if(event.key==='Enter') aramaMevzuat()">
+            <input id="mevzuat-arama" type="text" placeholder="Kanun adı, madde no veya konu ara..." class="flex-1 bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm" onkeydown="if(event.key==='Enter') aramaMevzuat()">
             <button onclick="aramaMevzuat()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-6 rounded-lg">Ara</button>
           </div>
           <div id="mevzuat-sonuc" class="space-y-2"></div>

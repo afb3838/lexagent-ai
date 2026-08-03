@@ -1,7 +1,7 @@
 -- LexAgent AI — Faz 5 eklentisi: Icra Takip
 -- Supabase SQL Editor'de elle calistirilir.
 
-create table public.icra_dosyalari (
+create table if not exists public.icra_dosyalari (
   id uuid primary key default gen_random_uuid(),
   kullanici_id uuid not null references auth.users(id),
   dosya_id uuid references public.dosyalar(id) on delete set null,
@@ -15,12 +15,12 @@ create table public.icra_dosyalari (
   created_at timestamptz not null default now()
 );
 
-create index icra_dosyalari_kullanici_id_idx on public.icra_dosyalari(kullanici_id);
-create index icra_dosyalari_dosya_id_idx on public.icra_dosyalari(dosya_id);
+create index if not exists icra_dosyalari_kullanici_id_idx on public.icra_dosyalari(kullanici_id);
+create index if not exists icra_dosyalari_dosya_id_idx on public.icra_dosyalari(dosya_id);
 
 alter table public.icra_dosyalari enable row level security;
 
-create table public.icra_adimlari (
+create table if not exists public.icra_adimlari (
   id uuid primary key default gen_random_uuid(),
   icra_id uuid not null references public.icra_dosyalari(id) on delete cascade,
   tarih date not null default current_date,
@@ -31,6 +31,6 @@ create table public.icra_adimlari (
   created_at timestamptz not null default now()
 );
 
-create index icra_adimlari_icra_id_idx on public.icra_adimlari(icra_id);
+create index if not exists icra_adimlari_icra_id_idx on public.icra_adimlari(icra_id);
 
 alter table public.icra_adimlari enable row level security;

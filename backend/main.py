@@ -1,6 +1,8 @@
 import os
 import io
+import base64
 import html as html_lib
+import json
 import re
 import secrets
 import uuid
@@ -144,6 +146,42 @@ async def call_gemini(system_prompt: str, user_prompt: str, use_search: bool):
     return text, sources
 
 
+async def call_gemini_vision(system_prompt: str, user_prompt: str, file_bytes: bytes, mime_type: str) -> str:
+    """Gemini'nin coklu-mod (metin+goruntu/PDF) anlama yetenegini kullanarak, metin
+    katmani olmayan taranmis belgeleri "okur" (OCR + anlama tek adimda). Ayri bir
+    tesseract/pytesseract kurulumuna gerek birakmaz; Render'da ek sistem paketi
+    gerektirmez."""
+    if not GEMINI_API_KEY:
+        raise HTTPException(500, "Sunucuda GEMINI_API_KEY tanimli degil.")
+
+    url = f"{GEMINI_BASE}/{MODEL_NAME}:generateContent?key={GEMINI_API_KEY}"
+    payload = {
+        "contents": [
+            {
+                "parts": [
+                    {"text": user_prompt},
+                    {"inline_data": {"mime_type": mime_type, "data": base64.b64encode(file_bytes).decode("ascii")}},
+                ]
+            }
+        ],
+        "systemInstruction": {"parts": [{"text": system_prompt}]},
+    }
+
+    async with httpx.AsyncClient(timeout=90) as client:
+        resp = await client.post(url, json=payload)
+
+    if resp.status_code != 200:
+        raise HTTPException(resp.status_code, f"Gemini API hatasi: {resp.text}")
+
+    data = resp.json()
+    candidates = data.get("candidates") or []
+    if not candidates:
+        raise HTTPException(502, "Gemini API bos yanit dondurdu.")
+
+    parts = candidates[0].get("content", {}).get("parts", [])
+    return "\n".join(p.get("text", "") for p in parts if "text" in p).strip()
+
+
 RESEARCH_SYSTEM = """Sen Turk hukuku konusunda uzman, Yargitay, Danistay, Anayasa Mahkemesi ve BAM/BIM kararlarini
 gercek ve dogrulanabilir acik internet kaynaklarindan arastiran bir hukuki arastirma asistanisin.
 
@@ -177,6 +215,28 @@ KURALLAR:
 - Bir sure/hak dusurucu sure hesaplamasindan bahsediyorsan mutlaka "bu bir on degerlendirmedir, avukat
   tarafindan teyit edilmelidir" notunu ekle.
 - Turkce, sade ve net yaz."""
+
+VEKALETNAME_OCR_SYSTEM = """Sen bir hukuk burosunda vekaletname belgelerini inceleyen bir asistansin.
+Sana taranmis (goruntu tabanli, metin katmani olmayabilir) bir vekaletname belgesi veriliyor.
+Belgeyi dikkatlice oku ve SADECE su alanlari iceren gecerli bir JSON nesnesi dondur:
+
+{"veren_tarih": "YYYY-MM-DD" veya null, "ozel_yetkiler": "kisa liste, orn: Temyiz, Sulh, Ibra" veya null, "ozet": "1-2 cumlelik kisa aciklama (kime, hangi kapsamda verildigi)" veya null}
+
+KURALLAR:
+- Sadece belgede gercekten okuyabildigin bilgileri doldur; emin olmadigin alanlari null birak, UYDURMA.
+- Baska hicbir metin ekleme, sadece JSON dondur (kod bloğu isaretleyicisi de ekleme)."""
+
+MEVZUAT_SYSTEM = """Sen Turk mevzuati konusunda uzman bir arastirma asistanisin. Kullanicinin arattigi
+kanun/madde/konu ile ilgili GERCEK ve DOGRULANABILIR bilgiyi, acik internet kaynaklarindan (oncelikle
+mevzuat.gov.tr ve Resmi Gazete) bularak raporla.
+
+KURALLAR (KESINLIKLE UY):
+1. SADECE gercekten bulup dogrulayabildigin kanun/madde bilgisini raporla. Madde numarasi, tarih veya
+   metin icerigini UYDURMA.
+2. Eger aramayla eslesen gercek/guncel bir sonuc bulamadiysan, bunu acikca belirt; sahte bir kanun
+   adi/numarasi veya madde metni uretme.
+3. Her sonuc icin: Kanun adi, Kanun No (varsa), ilgili madde(ler), kisa aciklama.
+4. Turkce yanit ver."""
 
 
 async def get_owned_dosya(dosya_id: str, user_id: str) -> dict:
@@ -485,6 +545,7 @@ async def create_vekaletname(
 ):
     await get_owned_dosya(dosya_id, user["id"])
     storage_path = None
+    ai_fields = {}
     if dosya is not None and dosya.filename:
         data = await dosya.read()
         try:
@@ -492,13 +553,41 @@ async def create_vekaletname(
             storage_path = await db.upload_file(STORAGE_BUCKET, path, data, dosya.content_type)
         except Exception:
             pass
+
+        # Metin katmani var mi kontrol et (pypdf); yoksa (taranmis/goruntu tabanli
+        # belge) Gemini'nin coklu-mod anlama ozelligiyle OCR + alan cikarimi yap.
+        content_type = (dosya.content_type or "").lower()
+        name_lower = dosya.filename.lower()
+        extracted_text = ""
+        if name_lower.endswith(".pdf") or content_type == "application/pdf":
+            try:
+                extracted_text = extract_pdf_text(data)
+            except Exception:
+                extracted_text = ""
+
+        is_image = content_type.startswith("image/")
+        is_scanned_pdf = (name_lower.endswith(".pdf") or content_type == "application/pdf") and len(extracted_text.strip()) < 50
+        if is_image or is_scanned_pdf:
+            mime = content_type or "application/pdf"
+            try:
+                raw = await call_gemini_vision(
+                    VEKALETNAME_OCR_SYSTEM,
+                    "Bu vekaletname belgesini incele ve istenen alanlari JSON olarak dondur.",
+                    data,
+                    mime,
+                )
+                cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw.strip())
+                ai_fields = json.loads(cleaned)
+            except Exception:
+                ai_fields = {}
+
     row = {
         "kullanici_id": user["id"],
         "dosya_id": dosya_id,
-        "veren_tarih": veren_tarih or None,
+        "veren_tarih": veren_tarih or ai_fields.get("veren_tarih") or None,
         "gecerlilik_tarihi": gecerlilik_tarihi or None,
-        "ozel_yetkiler": ozel_yetkiler or None,
-        "notlar": notlar or None,
+        "ozel_yetkiler": ozel_yetkiler or ai_fields.get("ozel_yetkiler") or None,
+        "notlar": notlar or ai_fields.get("ozet") or None,
         "storage_path": storage_path,
     }
     return await db.insert("vekaletnameler", row)
@@ -679,15 +768,15 @@ async def convert_text_to_pdf(
 
 @app.get("/api/mevzuat")
 async def search_mevzuat(q: str = "", user: dict = Depends(get_current_user)):
-    if q:
-        rows = await db.select(
-            "mevzuat",
-            {"or": f"(kanun_adi.ilike.*{q}*,ozet.ilike.*{q}*,kategori.ilike.*{q}*)"},
-            order="kanun_adi.asc",
-        )
-    else:
-        rows = await db.select("mevzuat", {}, order="kanun_adi.asc")
-    return {"mevzuat": rows}
+    if not q.strip():
+        return {"result": "", "sources": []}
+
+    user_prompt = f"""Su konu/kanun/madde hakkinda gercek ve guncel mevzuat bilgisi ara: {q}
+
+mevzuat.gov.tr veya Resmi Gazete gibi resmi kaynaklardan dogrulanabilir sonuclar bul ve
+kaynak baglantilarini belirt."""
+    text, sources = await call_gemini(MEVZUAT_SYSTEM, user_prompt, use_search=True)
+    return {"result": text, "sources": sources}
 
 
 @app.post("/api/dosyalar/{dosya_id}/paylasim-linki")
