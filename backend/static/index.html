@@ -462,7 +462,8 @@
             <input id="mevzuat-arama" type="text" placeholder="Kanun adı, madde no veya konu ara..." class="flex-1 bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm" onkeydown="if(event.key==='Enter') aramaMevzuat()">
             <button onclick="aramaMevzuat()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-6 rounded-lg">Ara</button>
           </div>
-          <div id="mevzuat-sonuc" class="space-y-2"></div>
+          <div id="mevzuat-sources" class="flex flex-wrap gap-2"></div>
+          <div id="mevzuat-text" class="space-y-2 text-sm leading-relaxed"></div>
         </div>
       </div>
 
@@ -576,7 +577,7 @@
           </button>
         </div>
         <div id="research-sources" class="flex flex-wrap gap-2 mb-4"></div>
-        <div id="research-text" class="prose prose-sm max-w-none whitespace-pre-wrap text-sm leading-relaxed"></div>
+        <div id="research-text" class="space-y-2 text-sm leading-relaxed"></div>
       </div>
       <div id="save-to-dosya-research" class="hidden bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex items-center gap-3">
         <select id="save-dosya-select-research" class="flex-1 text-sm border border-slate-300 rounded-lg px-3 py-2"></select>

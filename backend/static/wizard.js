@@ -179,16 +179,13 @@ async function startResearch() {
       instruction: document.getElementById("instruction").value,
     });
     lastResearchText = data.result;
-    document.getElementById("research-text").textContent = data.result;
-    const srcBox = document.getElementById("research-sources");
-    srcBox.innerHTML = data.sources.length
-      ? data.sources
-          .map(
-            (s) =>
-              `<a href="${s.uri}" target="_blank" class="text-xs bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 px-2.5 py-1 rounded-md border border-slate-200"><i class="fa-solid fa-link mr-1"></i>${s.title.substring(0, 40)}</a>`
-          )
-          .join("")
-      : '<span class="text-xs text-slate-400">Kaynak künyesi dönmedi.</span>';
+    renderKaynakliSonuc(
+      "research-sources",
+      "research-text",
+      data.result,
+      data.sources,
+      "Bu konuyla ilgili doğrulanmış bir emsal karar bulunamadı. Aşağıdaki kanun maddeleri ve genel hukuki ilkeler için sonucu inceleyin, ya da farklı anahtar kelimelerle tekrar deneyin."
+    );
     document.getElementById("research-loading").classList.add("hidden");
     document.getElementById("research-results").classList.remove("hidden");
   } catch (err) {

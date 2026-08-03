@@ -3,6 +3,7 @@ import io
 import base64
 import html as html_lib
 import json
+import logging
 import re
 import secrets
 import uuid
@@ -22,6 +23,9 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 import auth
 import db
 from auth import get_current_user
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("lexagent")
 
 # ---------------------------------------------------------------------------
 # Config
@@ -109,6 +113,20 @@ async def parse_files(files: List[UploadFile] = File(...), user: dict = Depends(
 # ---------------------------------------------------------------------------
 # Gemini API cagrisi (sunucu tarafinda, API anahtari asla tarayiciya gitmez)
 # ---------------------------------------------------------------------------
+def friendly_gemini_error(status_code: int) -> str:
+    """Gemini'nin ham hata govdesini kullaniciya hic gostermeyiz (teknik detay,
+    bazen JSON, bazen kota/faturalandirma bilgisi icerir) - burada kullaniciya
+    gosterilecek sade Turkce mesaja ceviririz; ham detay logger.error ile
+    sunucu loglarina yazilir."""
+    if status_code == 429:
+        return "Şu anda çok fazla istek var (kullanım kotası doldu). Lütfen birkaç dakika sonra tekrar deneyin."
+    if status_code in (401, 403):
+        return "Sunucu yapılandırma hatası (API anahtarı geçersiz). Lütfen yönetici ile iletişime geçin."
+    if status_code >= 500:
+        return "Yapay zeka servisi şu anda yanıt vermiyor. Lütfen birkaç dakika sonra tekrar deneyin."
+    return "Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin."
+
+
 async def call_gemini(system_prompt: str, user_prompt: str, use_search: bool):
     if not GEMINI_API_KEY:
         raise HTTPException(500, "Sunucuda GEMINI_API_KEY tanimli degil. Render Environment ayarlarindan ekleyin.")
@@ -125,12 +143,13 @@ async def call_gemini(system_prompt: str, user_prompt: str, use_search: bool):
         resp = await client.post(url, json=payload)
 
     if resp.status_code != 200:
-        raise HTTPException(resp.status_code, f"Gemini API hatasi: {resp.text}")
+        logger.error("Gemini API hatasi (%s): %s", resp.status_code, resp.text)
+        raise HTTPException(resp.status_code, friendly_gemini_error(resp.status_code))
 
     data = resp.json()
     candidates = data.get("candidates") or []
     if not candidates:
-        raise HTTPException(502, "Gemini API bos yanit dondurdu.")
+        raise HTTPException(502, "Yapay zeka servisi boş yanıt döndürdü. Lütfen tekrar deneyin.")
 
     candidate = candidates[0]
     parts = candidate.get("content", {}).get("parts", [])
@@ -171,12 +190,13 @@ async def call_gemini_vision(system_prompt: str, user_prompt: str, file_bytes: b
         resp = await client.post(url, json=payload)
 
     if resp.status_code != 200:
-        raise HTTPException(resp.status_code, f"Gemini API hatasi: {resp.text}")
+        logger.error("Gemini vision API hatasi (%s): %s", resp.status_code, resp.text)
+        raise HTTPException(resp.status_code, friendly_gemini_error(resp.status_code))
 
     data = resp.json()
     candidates = data.get("candidates") or []
     if not candidates:
-        raise HTTPException(502, "Gemini API bos yanit dondurdu.")
+        raise HTTPException(502, "Yapay zeka servisi boş yanıt döndürdü. Lütfen tekrar deneyin.")
 
     parts = candidates[0].get("content", {}).get("parts", [])
     return "\n".join(p.get("text", "") for p in parts if "text" in p).strip()
@@ -194,13 +214,26 @@ KURALLAR (KESINLIKLE UY):
 4. Turkce yanit ver."""
 
 DRAFT_SYSTEM = """Sen Turk yargilama hukukuna hakim, kidemli bir avukatsin. Sana verilen olay ozeti, kullanicinin
-talimati ve (varsa) arastirma asamasinda bulunan gercek emsal kararlari kullanarak resmi standartlara uygun bir
-dilekce TASLAGI yaziyorsun.
+talimati ve (varsa) arastirma asamasinda bulunan gercek emsal kararlari kullanarak, Hukuk Muhakemeleri Kanunu
+m.119'da (dava dilekcesinin icerigi) tanimlanan zorunlu unsurlari eksiksiz iceren resmi bir dilekce TASLAGI
+yaziyorsun. Bu unsurlar bir sablon METNI degil, dilekcenin uymasi gereken YAPISAL ISKELETTIR - her davanin
+somut olaylarina gore icerigini SEN olusturursun.
+
+DILEKCENIN ZORUNLU YAPISI (HMK m.119 esas alinarak):
+1. MAHKEME BASLIGI: Gorevli/yetkili mahkemenin adi, en ust satirda.
+2. TARAFLAR: Davaci/davali (veya taraf rolune gore alacakli/borclu vb.) ad-soyad/unvan ve varsa vekilleri;
+   gercek bir kimlik/adres bilgisi verilmemisse "[......]" seklinde doldurulmasi gereken bos alan birak,
+   UYDURMA.
+3. KONU: Davanin/talebin konusu, kisa ve net.
+4. ACIKLAMALAR: Olayin, verilen bilgilere dayanarak, sira numarasi altinda acik bir ozeti (vakialar).
+5. HUKUKI NEDENLER: Dayanilan kanun maddeleri ve hukuki sebepler (verilmisse arastirma sonuclarindaki
+   emsal kararlarla desteklenir).
+6. DELILLER: Olayda belirtilen veya mantiken var olacak delil turleri (belge, tanik, bilirkisi vb.).
+7. SONUC VE ISTEM: Acik, sayilarla/maddelerle ifade edilmis somut talep.
 
 KURALLAR:
 - Sadece sana verilen emsal kararlari kullan; kendi uydurdugun Esas/Karar numarasi ekleme.
-- Resmi dilekce formatini uygula: Mahkeme basligi, taraflar, konu, aciklamalar (olay + hukuki gerekce),
-  hukuki nedenler, hukuki deliller, sonuc ve istem.
+- Yukaridaki 7 unsurun tamamini, davanin turune uygun basliklarla, dilekcede mutlaka bulundur.
 - Dilekcenin en altina kucuk harflerle su notu ekle: "Bu bir taslaktir; gonderilmeden once mutlaka bir
   avukat tarafindan incelenmelidir." """
 
@@ -227,15 +260,25 @@ KURALLAR:
 - Baska hicbir metin ekleme, sadece JSON dondur (kod bloğu isaretleyicisi de ekleme)."""
 
 MEVZUAT_SYSTEM = """Sen Turk mevzuati konusunda uzman bir arastirma asistanisin. Kullanicinin arattigi
-kanun/madde/konu ile ilgili GERCEK ve DOGRULANABILIR bilgiyi, acik internet kaynaklarindan (oncelikle
-mevzuat.gov.tr ve Resmi Gazete) bularak raporla.
+kanun/madde/konu ile ilgili GERCEK ve DOGRULANABILIR bilgiyi, acik internet kaynaklarindan bularak raporla.
+
+TARANACAK KAYNAKLAR (oncelik sirasiyla):
+1. mevzuat.gov.tr (resmi mevzuat bilgi sistemi)
+2. Resmi Gazete (resmigazete.gov.tr)
+3. TBMM Kanunlar ve Kararlar Bilgi Sistemi (tbmm.gov.tr)
+4. Ilgili bakanlik/kurum resmi sayfalari (orn. Adalet Bakanligi, Turkiye Barolar Birligi)
+Birden fazla kaynaktan capraz dogrulama yapmaya calis; ayni bilgiyi birden fazla resmi kaynakta
+teyit edebiliyorsan bunu belirt.
 
 KURALLAR (KESINLIKLE UY):
 1. SADECE gercekten bulup dogrulayabildigin kanun/madde bilgisini raporla. Madde numarasi, tarih veya
    metin icerigini UYDURMA.
-2. Eger aramayla eslesen gercek/guncel bir sonuc bulamadiysan, bunu acikca belirt; sahte bir kanun
-   adi/numarasi veya madde metni uretme.
-3. Her sonuc icin: Kanun adi, Kanun No (varsa), ilgili madde(ler), kisa aciklama.
+2. Eger aramayla eslesen gercek/guncel bir sonuc bulamadiysan, bunu acikca ve profesyonelce belirt
+   ("bu konuda dogrulanmis bir mevzuat hukmu bulamadim" gibi); sahte bir kanun adi/numarasi veya
+   madde metni uretme. Boyle durumda, biliyorsan ilgili genel konunun hangi kanun(lar) altinda
+   duzenlenmis olabilecegini (madde numarasi vermeden) belirtebilirsin.
+3. Her sonuc icin ayri bir paragrafta: Kanun adi, Kanun No (varsa), ilgili madde(ler), kisa aciklama,
+   yururluk/guncelleme tarihi (biliniyorsa).
 4. Turkce yanit ver."""
 
 

@@ -11,6 +11,19 @@ async function getAccessToken() {
   return data.session ? data.session.access_token : null;
 }
 
+// FastAPI hatalari genelde {"detail": "..."} govdesiyle doner; kullaniciya ham
+// JSON/teknik metin yerine sadece o okunabilir mesaji gostermek icin ayiklar.
+function extractErrorMessage(rawText, fallback) {
+  try {
+    const parsed = JSON.parse(rawText);
+    if (parsed && typeof parsed.detail === "string") return parsed.detail;
+    if (Array.isArray(parsed?.detail) && parsed.detail[0]?.msg) return parsed.detail[0].msg;
+  } catch (e) {
+    // JSON degil, ham metni kullan
+  }
+  return rawText || fallback;
+}
+
 async function authedFetch(url, options = {}) {
   const token = await getAccessToken();
   const headers = { ...(options.headers || {}) };
@@ -18,7 +31,7 @@ async function authedFetch(url, options = {}) {
   const res = await fetch(url, { ...options, headers });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(text || (res.status + " " + res.statusText));
+    throw new Error(extractErrorMessage(text, res.status + " " + res.statusText));
   }
   return res;
 }
@@ -27,6 +40,51 @@ function toFormData(fields) {
   const fd = new FormData();
   Object.entries(fields).forEach(([k, v]) => fd.append(k, v ?? ""));
   return fd;
+}
+
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str ?? "";
+  return div.innerHTML;
+}
+
+// Emsal Arastirma ve Mevzuat modullerinin ikisinde de kullanilan ortak sonuc
+// gorunumu: kaynak linklerini chip olarak, metni okunakli paragraf kartlarina
+// bolerek gosterir; sonuc yoksa net bir "bulunamadi" karti gosterir (bos/kirik
+// gorunmesin diye).
+function renderKaynakliSonuc(sourcesElId, textElId, resultText, sources, noResultText) {
+  const sourcesBox = document.getElementById(sourcesElId);
+  const textBox = document.getElementById(textElId);
+  const trimmed = (resultText || "").trim();
+
+  if (!trimmed) {
+    sourcesBox.innerHTML = "";
+    textBox.innerHTML = `
+      <div class="text-center py-10 text-slate-400">
+        <i class="fa-solid fa-circle-info text-2xl mb-2"></i>
+        <p class="text-sm">${escapeHtml(noResultText || "Bu konuda doğrulanmış bir sonuç bulunamadı.")}</p>
+      </div>`;
+    return;
+  }
+
+  sourcesBox.innerHTML = (sources || []).length
+    ? sources
+        .map(
+          (s) =>
+            `<a href="${escapeHtml(s.uri)}" target="_blank" class="text-xs bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 px-2.5 py-1.5 rounded-md border border-slate-200 inline-flex items-center gap-1"><i class="fa-solid fa-link"></i>${escapeHtml(s.title.substring(0, 50))}</a>`
+        )
+        .join("")
+    : `<p class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-1.5 inline-block"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Kaynak bağlantısı dönmedi — sonucu ayrıca doğrulayın.</p>`;
+
+  const paragraphs = trimmed.split(/\n\s*\n/).filter((p) => p.trim());
+  textBox.innerHTML = paragraphs.length
+    ? paragraphs
+        .map(
+          (p) =>
+            `<div class="border border-slate-100 rounded-lg p-3.5 bg-slate-50/60 whitespace-pre-wrap">${escapeHtml(p.trim())}</div>`
+        )
+        .join("")
+    : `<div class="whitespace-pre-wrap">${escapeHtml(trimmed)}</div>`;
 }
 
 // Dosyalari tek tek yukleyip her biri icin ayri bir ilerleme cubugu gosterir.

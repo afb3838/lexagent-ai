@@ -1,35 +1,35 @@
 // Mevzuat arama - canli arama modulu. Emsal Arastirma modulundekiyle ayni
-// yaklasimi kullanir: Gemini + google_search grounding ile mevzuat.gov.tr/Resmi
-// Gazete kaynakli, dogrulanabilir sonuclar arar (sabit ornek veri seti yok).
+// yaklasimi (Gemini + google_search grounding) ve ayni sonuc gorunumunu
+// (renderKaynakliSonuc, api.js) kullanir - sabit ornek veri seti yok.
+function clearMevzuatSonuc(message) {
+  document.getElementById("mevzuat-sources").innerHTML = "";
+  document.getElementById("mevzuat-text").innerHTML = `<p class="text-sm text-slate-400">${message}</p>`;
+}
+
 async function loadMevzuatPage() {
   document.getElementById("mevzuat-arama").value = "";
-  document.getElementById("mevzuat-sonuc").innerHTML =
-    '<p class="text-sm text-slate-400">Aramak için bir kanun/madde/konu girin.</p>';
+  clearMevzuatSonuc("Aramak için bir kanun/madde/konu girin.");
 }
 
 async function aramaMevzuat() {
   const q = document.getElementById("mevzuat-arama").value.trim();
-  const box = document.getElementById("mevzuat-sonuc");
   if (!q) {
-    box.innerHTML = '<p class="text-sm text-slate-400">Aramak için bir kanun/madde/konu girin.</p>';
+    clearMevzuatSonuc("Aramak için bir kanun/madde/konu girin.");
     return;
   }
-  box.innerHTML = '<p class="text-sm text-slate-400"><i class="fa-solid fa-magnifying-glass animate-pulse mr-1"></i>Gerçek kaynaklar taranıyor, birkaç saniye sürebilir...</p>';
+  clearMevzuatSonuc('<i class="fa-solid fa-magnifying-glass animate-pulse mr-1"></i>Gerçek kaynaklar taranıyor, birkaç saniye sürebilir...');
   try {
     const data = await api.searchMevzuat(q);
-    const sourcesHtml = (data.sources || [])
-      .map(
-        (s) =>
-          `<a href="${s.uri}" target="_blank" class="text-xs bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 px-2.5 py-1 rounded-md border border-slate-200 inline-block mr-1 mb-1"><i class="fa-solid fa-link mr-1"></i>${s.title.substring(0, 50)}</a>`
-      )
-      .join("");
-    box.innerHTML = data.result
-      ? `<div class="border border-slate-200 rounded-lg p-4 space-y-3">
-          <div class="flex flex-wrap gap-1">${sourcesHtml || '<span class="text-xs text-slate-400">Kaynak bağlantısı dönmedi.</span>'}</div>
-          <div class="text-sm whitespace-pre-wrap leading-relaxed">${data.result}</div>
-        </div>`
-      : '<p class="text-sm text-slate-400">Sonuç bulunamadı.</p>';
+    renderKaynakliSonuc(
+      "mevzuat-sources",
+      "mevzuat-text",
+      data.result,
+      data.sources,
+      "Bu konuda doğrulanmış bir mevzuat hükmü bulunamadı. Farklı anahtar kelimelerle (kanun adı, madde no) tekrar deneyin."
+    );
   } catch (err) {
-    box.innerHTML = '<p class="text-sm text-rose-500">Arama başarısız: ' + err.message + "</p>";
+    document.getElementById("mevzuat-sources").innerHTML = "";
+    document.getElementById("mevzuat-text").innerHTML =
+      '<p class="text-sm text-rose-500">Arama başarısız: ' + escapeHtml(err.message) + "</p>";
   }
 }
