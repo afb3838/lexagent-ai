@@ -273,4 +273,30 @@ const api = {
     const res = await authedFetch(`/api/dosyalar/${dosyaId}/paylasim-linki`, { method: "POST" });
     return res.json();
   },
+  async belgeAnalizi(metin) {
+    const res = await authedFetch("/api/belge-analizi", { method: "POST", body: toFormData({ metin }) });
+    return res.json();
+  },
+  async dogrulaArastirma(metin) {
+    const res = await authedFetch("/api/research/dogrula", { method: "POST", body: toFormData({ metin }) });
+    return res.json();
+  },
 };
+
+// Kaynaksiz, sade metin sonuclarini (belge risk analizi gibi) paragraf
+// kartlarina bolerek gosterir - renderKaynakliSonuc'un kaynak-chip kismi
+// olmayan sadelestirilmis hali.
+function renderMetinKartlari(elId, text) {
+  const box = document.getElementById(elId);
+  const trimmed = (text || "").trim();
+  if (!trimmed) {
+    box.innerHTML = '<p class="text-sm text-slate-400">Sonuç alınamadı.</p>';
+    return;
+  }
+  const paragraphs = trimmed.split(/\n\s*\n/).filter((p) => p.trim());
+  box.innerHTML = paragraphs.length
+    ? paragraphs
+        .map((p) => `<div class="border border-slate-100 rounded-lg p-3.5 bg-slate-50/60 whitespace-pre-wrap">${escapeHtml(p.trim())}</div>`)
+        .join("")
+    : `<div class="whitespace-pre-wrap">${escapeHtml(trimmed)}</div>`;
+}

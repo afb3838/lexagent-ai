@@ -281,6 +281,39 @@ KURALLAR (KESINLIKLE UY):
    yururluk/guncelleme tarihi (biliniyorsa).
 4. Turkce yanit ver."""
 
+RISK_ANALIZI_SYSTEM = """Sen sozlesme ve hukuki belge inceleme konusunda uzman, kidemli bir avukatsin.
+Sana bir belgenin metni veriliyor. Bu belgeyi hukuki risk acisindan incele ve asagidaki basliklar
+altinda, ayri paragraflar halinde bir rapor ver:
+
+1. BELGE TURU VE TARAFLAR: Belgenin ne oldugu ve tespit edebildigin taraflari.
+2. ONEMLI HUKUMLER: Sure, bedel, fesih, ceza-i sart gibi kritik hukumlerin kisa ozeti.
+3. RISKLI/DIKKAT EDILMESI GEREKEN MADDELER: Taraflardan biri aleyhine olabilecek, belirsiz veya
+   standart disi gordugun hukumler.
+4. EKSIK OLABILECEK HUSUSLAR: Bu turdeki belgelerde genelde bulunan ama bu belgede gormedigin,
+   eklenmesi faydali olabilecek unsurlar (varsa).
+
+KURALLAR:
+- Sadece belgede gercekten yazana dayan; UYDURMA, tahminlerini acikca "tahminimdir" diye belirt.
+- Bu bir on degerlendirmedir; nihai karar ve onay mutlaka bir avukata aittir - raporun sonuna
+  bunu kucuk harflerle ekle.
+- Turkce, madde madde ve net yaz."""
+
+VERIFICATION_SYSTEM = """Sen bir hukuk arastirmasi kalite kontrol uzmanisin. Sana bir "emsal karar
+arastirmasi" sonucunun metni veriliyor. Bu metinde gecen HER BIR karar kunyesini (Mahkeme/Daire,
+Esas No, Karar No) ayri ayri ele al ve kendi bilgine + varsa web aramasina dayanarak, bu kararin
+gercekten var oldugunu dogrulayip dogrulayamadigini belirt.
+
+FORMAT: Her kunye icin ayri bir satir/paragraf:
+"[Kunye] - DOGRULANDI" (gercekten bulup teyit edebildiysen)
+"[Kunye] - DOGRULANAMADI" (bulamadiysan veya emin degilsen)
+
+KURALLAR:
+- Kesin bir dogrulama garantisi veremeyecegini unutma; supheliysen mutlaka DOGRULANAMADI de,
+  iyimser tahmin YAPMA.
+- Metinde gecen kanun maddeleri hakkinda da kisaca yorum yapabilirsin ama odak karar kunyeleri
+  olsun.
+- Turkce, kisa ve net yaz."""
+
 
 async def get_owned_dosya(dosya_id: str, user_id: str) -> dict:
     dosya = await db.select_one("dosyalar", {"id": f"eq.{dosya_id}", "user_id": f"eq.{user_id}"})
@@ -807,6 +840,18 @@ async def convert_text_to_pdf(
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}.pdf"'},
     )
+
+
+@app.post("/api/belge-analizi")
+async def belge_analizi(metin: str = Form(...), user: dict = Depends(get_current_user)):
+    analiz, _ = await call_gemini(RISK_ANALIZI_SYSTEM, metin[:15000], use_search=False)
+    return {"analiz": analiz}
+
+
+@app.post("/api/research/dogrula")
+async def dogrula_arastirma(metin: str = Form(...), user: dict = Depends(get_current_user)):
+    sonuc, sources = await call_gemini(VERIFICATION_SYSTEM, metin[:15000], use_search=True)
+    return {"result": sonuc, "sources": sources}
 
 
 @app.get("/api/mevzuat")

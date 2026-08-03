@@ -54,6 +54,7 @@ function mountWizard(containerId, dosyaId) {
   document.getElementById("sablon-sec").value = "";
   document.getElementById("research-results").classList.add("hidden");
   document.getElementById("research-error").classList.add("hidden");
+  document.getElementById("research-dogrulama").classList.add("hidden");
   document.getElementById("petition-canvas").classList.add("hidden");
   document.getElementById("draft-error").classList.add("hidden");
 
@@ -168,6 +169,7 @@ async function startResearch() {
   document.getElementById("research-loading").classList.remove("hidden");
   document.getElementById("research-results").classList.add("hidden");
   document.getElementById("research-error").classList.add("hidden");
+  document.getElementById("research-dogrulama").classList.add("hidden");
 
   try {
     const data = await api.research({
@@ -193,6 +195,23 @@ async function startResearch() {
     const errBox = document.getElementById("research-error");
     errBox.textContent = "Hata: " + err.message;
     errBox.classList.remove("hidden");
+  }
+}
+
+async function dogrulaAramaSonucu() {
+  if (!lastResearchText) {
+    showToast("Önce bir araştırma yapın.");
+    return;
+  }
+  const panel = document.getElementById("research-dogrulama");
+  panel.classList.remove("hidden");
+  renderMetinKartlari("research-dogrulama-metin", '<i class="fa-solid fa-shield-halved animate-pulse mr-1"></i>Künyeler doğrulanıyor, birkaç saniye sürebilir...');
+  try {
+    const data = await api.dogrulaArastirma(lastResearchText);
+    renderMetinKartlari("research-dogrulama-metin", data.result);
+  } catch (err) {
+    document.getElementById("research-dogrulama-metin").innerHTML =
+      '<p class="text-sm text-rose-500">Doğrulama başarısız: ' + escapeHtml(err.message) + "</p>";
   }
 }
 

@@ -235,6 +235,7 @@ async function openDosyaPage(id) {
     document.getElementById("vekaletname-form").classList.add("hidden");
     document.getElementById("cari-hesap-form").classList.add("hidden");
     document.getElementById("paylasim-link-box").classList.add("hidden");
+    document.getElementById("belge-analiz-sonuc").classList.add("hidden");
   }
   await refreshDosyaInfo(id);
 }
@@ -321,7 +322,10 @@ function renderBelgeList(belgeler) {
         <span class="text-slate-400 ml-1">(${BELGE_TUR_LABELS[b.tur] || b.tur})</span>
         ${b.error ? ' <span class="text-rose-500">hata: ' + b.error + "</span>" : ""}
       </span>
-      ${b.metin ? `<button onclick="downloadBelgeAsPdf(${i})" class="text-slate-400 hover:text-indigo-600" title="PDF indir"><i class="fa-solid fa-file-pdf"></i></button>` : ""}
+      <span class="flex items-center gap-2">
+        ${b.metin ? `<button onclick="analizEtBelge(${i})" class="text-slate-400 hover:text-indigo-600" title="Risk analizi"><i class="fa-solid fa-magnifying-glass-chart"></i></button>` : ""}
+        ${b.metin ? `<button onclick="downloadBelgeAsPdf(${i})" class="text-slate-400 hover:text-indigo-600" title="PDF indir"><i class="fa-solid fa-file-pdf"></i></button>` : ""}
+      </span>
     </div>`
     )
     .join("");
@@ -334,6 +338,25 @@ async function downloadBelgeAsPdf(i) {
   } catch (err) {
     showToast("PDF oluşturulamadı: " + err.message);
   }
+}
+
+async function analizEtBelge(i) {
+  const belge = currentBelgeler[i];
+  const box = document.getElementById("belge-analiz-sonuc");
+  box.classList.remove("hidden");
+  document.getElementById("belge-analiz-baslik").textContent = `Risk Analizi — ${belge.ad}`;
+  renderMetinKartlari("belge-analiz-metin", '<i class="fa-solid fa-magnifying-glass-chart animate-pulse mr-1"></i>Analiz ediliyor, birkaç saniye sürebilir...');
+  try {
+    const data = await api.belgeAnalizi(belge.metin);
+    renderMetinKartlari("belge-analiz-metin", data.analiz);
+  } catch (err) {
+    document.getElementById("belge-analiz-metin").innerHTML =
+      '<p class="text-sm text-rose-500">Analiz başarısız: ' + escapeHtml(err.message) + "</p>";
+  }
+}
+
+function kapatBelgeAnalizi() {
+  document.getElementById("belge-analiz-sonuc").classList.add("hidden");
 }
 
 function synthesizeCaseDetails(belgeler) {
