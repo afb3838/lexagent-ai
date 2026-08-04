@@ -194,9 +194,10 @@ async function startResearch() {
   } catch (err) {
     document.getElementById("research-loading").classList.add("hidden");
     const errBox = document.getElementById("research-error");
-    if (isGunlukLimitMesaji(err.message)) {
-      errBox.className = "rounded-xl p-4 text-sm";
-      errBox.innerHTML = bilgiKutusuHtml(err.message);
+    const yumusak = yumusakMesajKutusu(err.message);
+    if (yumusak) {
+      errBox.className = "rounded-xl";
+      errBox.innerHTML = yumusak;
     } else {
       errBox.className = "bg-rose-50 border border-rose-200 text-rose-700 rounded-xl p-4 text-sm";
       errBox.textContent = "Hata: " + err.message;
@@ -217,8 +218,9 @@ async function dogrulaAramaSonucu() {
     const data = await api.dogrulaArastirma(lastResearchText);
     renderMetinKartlari("research-dogrulama-metin", data.result);
   } catch (err) {
+    const yumusak = yumusakMesajKutusu(err.message);
     document.getElementById("research-dogrulama-metin").innerHTML =
-      '<p class="text-sm text-rose-500">Doğrulama başarısız: ' + escapeHtml(err.message) + "</p>";
+      yumusak || '<p class="text-sm text-rose-500">Doğrulama başarısız: ' + escapeHtml(err.message) + "</p>";
   }
 }
 
@@ -246,7 +248,14 @@ async function goToDraft() {
   } catch (err) {
     document.getElementById("draft-loading").classList.add("hidden");
     const errBox = document.getElementById("draft-error");
-    errBox.textContent = "Hata: " + err.message;
+    const yumusak = yumusakMesajKutusu(err.message);
+    if (yumusak) {
+      errBox.className = "rounded-xl";
+      errBox.innerHTML = yumusak;
+    } else {
+      errBox.className = "bg-rose-50 border border-rose-200 text-rose-700 rounded-xl p-4 text-sm";
+      errBox.textContent = "Hata: " + err.message;
+    }
     errBox.classList.remove("hidden");
   }
 }

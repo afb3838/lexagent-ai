@@ -54,6 +54,12 @@ function isGunlukLimitMesaji(msg) {
   return typeof msg === "string" && msg.includes("Günlük araştırma hakkınızı doldurdunuz");
 }
 
+// Gemini servisinin gecici olarak kullanilamadigi (kota/faturalandirma/5xx) durum -
+// kullaniciya "kirik" degil, gecici bir bakim/yogunluk mesaji gibi gosterilir.
+function isGeciciKullanilamiyorMesaji(msg) {
+  return typeof msg === "string" && msg.includes("şu anda geçici olarak kullanılamıyor");
+}
+
 function bilgiKutusuHtml(msg) {
   return (
     '<div class="bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-xl p-4 text-sm flex items-start gap-2">' +
@@ -61,6 +67,23 @@ function bilgiKutusuHtml(msg) {
     escapeHtml(msg) +
     "</span></div>"
   );
+}
+
+function uyariKutusuHtml(msg) {
+  return (
+    '<div class="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl p-4 text-sm flex items-start gap-2">' +
+    '<i class="fa-solid fa-clock-rotate-left mt-0.5"></i><span>' +
+    escapeHtml(msg) +
+    "</span></div>"
+  );
+}
+
+// Hem gunluk limit hem gecici-kullanilamama mesajlarini "hata degil, bilgi" olarak
+// gosteren ortak karar fonksiyonu - cagiran kod tek bir if/else yazsin yeter.
+function yumusakMesajKutusu(msg) {
+  if (isGunlukLimitMesaji(msg)) return bilgiKutusuHtml(msg);
+  if (isGeciciKullanilamiyorMesaji(msg)) return uyariKutusuHtml(msg);
+  return null;
 }
 
 // Emsal Arastirma ve Mevzuat modullerinin ikisinde de kullanilan ortak sonuc

@@ -120,11 +120,11 @@ def friendly_gemini_error(status_code: int) -> str:
     gosterilecek sade Turkce mesaja ceviririz; ham detay logger.error ile
     sunucu loglarina yazilir."""
     if status_code == 429:
-        return "Şu anda çok fazla istek var (kullanım kotası doldu). Lütfen birkaç dakika sonra tekrar deneyin."
+        return "Bu özellik şu anda yoğun talep nedeniyle geçici olarak kullanılamıyor. Lütfen kısa süre sonra tekrar deneyin."
     if status_code in (401, 403):
-        return "Sunucu yapılandırma hatası (API anahtarı geçersiz). Lütfen yönetici ile iletişime geçin."
+        return "Bu özellik şu anda geçici olarak kullanılamıyor. Ekibimiz bilgilendirildi, lütfen daha sonra tekrar deneyin."
     if status_code >= 500:
-        return "Yapay zeka servisi şu anda yanıt vermiyor. Lütfen birkaç dakika sonra tekrar deneyin."
+        return "Bu özellik şu anda geçici olarak kullanılamıyor. Lütfen kısa süre sonra tekrar deneyin."
     return "Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin."
 
 
@@ -427,21 +427,26 @@ Guncellenmis "son durum ozeti"ni yaz."""
 # Tablo henuz olusturulmadiysa (migration 011 calistirilmadiysa) sessizce
 # atlanir - limit calismaz ama uygulama bozulmaz (fail-open).
 # ---------------------------------------------------------------------------
-GUNLUK_ARAMA_LIMITI = 10
+def gunluk_arama_limiti() -> int:
+    # Sabit kod yerine env var'dan okunur; Render Environment sekmesinden
+    # kod degisikligi/deploy gerekmeden degistirilebilir. Ileride paket bazli
+    # (deneme/baslangic/profesyonel/kurumsal) hale getirilecek tek nokta burasi.
+    try:
+        return int(os.environ.get("GUNLUK_ARAMA_LIMITI", "15"))
+    except ValueError:
+        return 15
 
 
 async def gunluk_kullanim_kontrol_ve_artir(user_id: str):
+    limit = gunluk_arama_limiti()
     bugun = datetime.now(timezone.utc).date().isoformat()
     try:
         kayit = await db.select_one("gunluk_kullanim", {"user_id": f"eq.{user_id}", "tarih": f"eq.{bugun}"})
     except Exception as e:
         logger.warning(f"gunluk_kullanim tablosuna erisilemedi, limit kontrolu atlandi: {e}")
         return
-    if kayit and kayit["sayi"] >= GUNLUK_ARAMA_LIMITI:
-        raise HTTPException(
-            429,
-            f"Günlük araştırma hakkınızı doldurdunuz ({GUNLUK_ARAMA_LIMITI} arama/gün). Yarın tekrar deneyebilirsiniz.",
-        )
+    if kayit and kayit["sayi"] >= limit:
+        raise HTTPException(429, "Günlük araştırma hakkınızı doldurdunuz. Yarın tekrar deneyebilirsiniz.")
     try:
         if kayit:
             await db.patch("gunluk_kullanim", {"user_id": f"eq.{user_id}", "tarih": f"eq.{bugun}"}, {"sayi": kayit["sayi"] + 1})
@@ -621,6 +626,7 @@ async def draft(
     precedents: str = Form(""),
     user: dict = Depends(get_current_user),
 ):
+    await gunluk_kullanim_kontrol_ve_artir(user["id"])
     if dosya_id:
         await get_owned_dosya(dosya_id, user["id"])
 
@@ -772,6 +778,7 @@ async def extract_vekaletname_fields(data: bytes, filename: str, content_type: s
 async def vekaletname_oku(dosya: UploadFile = File(...), user: dict = Depends(get_current_user)):
     """On-izleme: belgeyi kaydetmeden sadece alanlari cikarip dondurur, boylece
     kullanici formu kontrol edip duzeltebilir, sonra ayrica kaydeder."""
+    await gunluk_kullanim_kontrol_ve_artir(user["id"])
     data = await dosya.read()
     fields = await extract_vekaletname_fields(data, dosya.filename, dosya.content_type)
     return fields

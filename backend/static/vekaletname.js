@@ -135,7 +135,10 @@ async function vekaletnameDosyaSecildi(e) {
       ? `<i class="fa-solid fa-circle-check text-emerald-600 mr-1"></i>${doluSayisi} alan otomatik dolduruldu. Kaydetmeden önce kontrol edin, okunamayan alanları siz tamamlayın.`
       : '<i class="fa-solid fa-circle-info mr-1"></i>Belgeden alan okunamadı; alanları elle doldurun.';
   } catch (err) {
-    durumEl.innerHTML = '<span class="text-rose-600">Belge okunamadı: ' + escapeHtml(err.message) + " — alanları elle doldurabilirsiniz.</span>";
+    const yumusak = yumusakMesajKutusu(err.message);
+    durumEl.innerHTML = yumusak
+      ? yumusak + '<p class="text-xs text-slate-500 mt-1">Alanları elle doldurup kaydedebilirsiniz.</p>'
+      : '<span class="text-rose-600">Belge okunamadı: ' + escapeHtml(err.message) + " — alanları elle doldurabilirsiniz.</span>";
   }
 }
 

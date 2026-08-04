@@ -476,8 +476,9 @@ async function analizEtBelge(i) {
     const data = await api.belgeAnalizi(belge.metin);
     renderMetinKartlari("belge-analiz-metin", data.analiz);
   } catch (err) {
+    const yumusak = yumusakMesajKutusu(err.message);
     document.getElementById("belge-analiz-metin").innerHTML =
-      '<p class="text-sm text-rose-500">Analiz başarısız: ' + escapeHtml(err.message) + "</p>";
+      yumusak || '<p class="text-sm text-rose-500">Analiz başarısız: ' + escapeHtml(err.message) + "</p>";
   }
 }
 
