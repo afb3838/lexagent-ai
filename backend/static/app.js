@@ -195,6 +195,19 @@ supabaseClient.auth.onAuthStateChange((_event, session) => {
 });
 
 // ---------------------------------------------------------------------------
+// Mobil sidebar (kucuk ekranlarda hamburger menu)
+// ---------------------------------------------------------------------------
+function toggleMobileMenu() {
+  document.getElementById("sidebar").classList.toggle("-translate-x-full");
+  document.getElementById("sidebar-overlay").classList.toggle("hidden");
+}
+
+function closeMobileMenu() {
+  document.getElementById("sidebar").classList.add("-translate-x-full");
+  document.getElementById("sidebar-overlay").classList.add("hidden");
+}
+
+// ---------------------------------------------------------------------------
 // Router
 // ---------------------------------------------------------------------------
 function parseHash() {
@@ -221,6 +234,7 @@ function highlightNav(route) {
 
 async function router() {
   const { route, param } = parseHash();
+  closeMobileMenu();
   document.getElementById("page-title").textContent = PAGE_TITLES[route] || "";
   highlightNav(route);
 
