@@ -423,6 +423,35 @@ Guncellenmis "son durum ozeti"ni yaz."""
 
 
 # ---------------------------------------------------------------------------
+# Kullanici basina gunluk arama limiti (paylasilan Gemini kotasini korumak icin).
+# Tablo henuz olusturulmadiysa (migration 011 calistirilmadiysa) sessizce
+# atlanir - limit calismaz ama uygulama bozulmaz (fail-open).
+# ---------------------------------------------------------------------------
+GUNLUK_ARAMA_LIMITI = 10
+
+
+async def gunluk_kullanim_kontrol_ve_artir(user_id: str):
+    bugun = datetime.now(timezone.utc).date().isoformat()
+    try:
+        kayit = await db.select_one("gunluk_kullanim", {"user_id": f"eq.{user_id}", "tarih": f"eq.{bugun}"})
+    except Exception as e:
+        logger.warning(f"gunluk_kullanim tablosuna erisilemedi, limit kontrolu atlandi: {e}")
+        return
+    if kayit and kayit["sayi"] >= GUNLUK_ARAMA_LIMITI:
+        raise HTTPException(
+            429,
+            f"Günlük araştırma hakkınızı doldurdunuz ({GUNLUK_ARAMA_LIMITI} arama/gün). Yarın tekrar deneyebilirsiniz.",
+        )
+    try:
+        if kayit:
+            await db.patch("gunluk_kullanim", {"user_id": f"eq.{user_id}", "tarih": f"eq.{bugun}"}, {"sayi": kayit["sayi"] + 1})
+        else:
+            await db.insert("gunluk_kullanim", {"user_id": user_id, "tarih": bugun, "sayi": 1})
+    except Exception as e:
+        logger.warning(f"gunluk_kullanim guncellenemedi: {e}")
+
+
+# ---------------------------------------------------------------------------
 # Dosya (dava) yonetimi
 # ---------------------------------------------------------------------------
 @app.post("/api/dosyalar")
@@ -544,6 +573,7 @@ async def research(
     instruction: str = Form(""),
     user: dict = Depends(get_current_user),
 ):
+    await gunluk_kullanim_kontrol_ve_artir(user["id"])
     if dosya_id:
         await get_owned_dosya(dosya_id, user["id"])
 
@@ -978,6 +1008,7 @@ async def dogrula_arastirma(metin: str = Form(...), user: dict = Depends(get_cur
 async def search_mevzuat(q: str = "", user: dict = Depends(get_current_user)):
     if not q.strip():
         return {"result": "", "sources": []}
+    await gunluk_kullanim_kontrol_ve_artir(user["id"])
 
     user_prompt = f"""Su konu/kanun/madde hakkinda gercek ve guncel mevzuat bilgisi ara: {q}
 

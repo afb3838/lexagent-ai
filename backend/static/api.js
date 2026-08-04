@@ -48,6 +48,21 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+// Gunluk arama limiti bir hata degil, bilincli bir kullanim kurali oldugu icin
+// diger (gercek) hatalardan ayirt edip nazik bir bilgi kutusu olarak gosteririz.
+function isGunlukLimitMesaji(msg) {
+  return typeof msg === "string" && msg.includes("Günlük araştırma hakkınızı doldurdunuz");
+}
+
+function bilgiKutusuHtml(msg) {
+  return (
+    '<div class="bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-xl p-4 text-sm flex items-start gap-2">' +
+    '<i class="fa-solid fa-circle-info mt-0.5"></i><span>' +
+    escapeHtml(msg) +
+    "</span></div>"
+  );
+}
+
 // Emsal Arastirma ve Mevzuat modullerinin ikisinde de kullanilan ortak sonuc
 // gorunumu: kaynak linklerini chip olarak, metni okunakli paragraf kartlarina
 // bolerek gosterir; sonuc yoksa net bir "bulunamadi" karti gosterir (bos/kirik

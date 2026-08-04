@@ -194,7 +194,13 @@ async function startResearch() {
   } catch (err) {
     document.getElementById("research-loading").classList.add("hidden");
     const errBox = document.getElementById("research-error");
-    errBox.textContent = "Hata: " + err.message;
+    if (isGunlukLimitMesaji(err.message)) {
+      errBox.className = "rounded-xl p-4 text-sm";
+      errBox.innerHTML = bilgiKutusuHtml(err.message);
+    } else {
+      errBox.className = "bg-rose-50 border border-rose-200 text-rose-700 rounded-xl p-4 text-sm";
+      errBox.textContent = "Hata: " + err.message;
+    }
     errBox.classList.remove("hidden");
   }
 }

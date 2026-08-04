@@ -29,7 +29,8 @@ async function aramaMevzuat() {
     );
   } catch (err) {
     document.getElementById("mevzuat-sources").innerHTML = "";
-    document.getElementById("mevzuat-text").innerHTML =
-      '<p class="text-sm text-rose-500">Arama başarısız: ' + escapeHtml(err.message) + "</p>";
+    document.getElementById("mevzuat-text").innerHTML = isGunlukLimitMesaji(err.message)
+      ? bilgiKutusuHtml(err.message)
+      : '<p class="text-sm text-rose-500">Arama başarısız: ' + escapeHtml(err.message) + "</p>";
   }
 }
