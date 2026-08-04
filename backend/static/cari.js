@@ -114,13 +114,17 @@ async function submitCariHesapKaydi() {
 }
 
 // ---------------------------------------------------------------------------
-// AAUT ucret hesaplayici — 2025-2026 Avukatlik Asgari Ucret Tarifesi'nin
-// (Resmi Gazete Sayi: 33067, Tarih: 04.11.2025) nispi vekalet ucreti dilim
-// tablosuna dayanir. Iki bagimsiz kaynaktan capraz dogrulanmistir. Yine de
-// yillik degisebildigi ve tam metnin istisna/ozel durumlar icerebilecegi
-// icin sonuc mutlaka Resmi Gazete metniyle karsilastirilmalidir.
+// AAUT ucret hesaplayici — Avukatlik Asgari Ucret Tarifesi (Resmi Gazete Sayi
+// 33067, 4 Kasim 2025, Turkiye Barolar Birligi). Tablo 1 (konusu para olmayan
+// islerde mahkemeye gore maktu ucret) ve Tablo 2 (konusu para olan islerde
+// dava degerine gore kademeli/kumulatif nispi ucret) rakamlari kullanicinin
+// dogrudan verdigi resmi metne dayanir - burada UYDURULMAMISTIR. Listede
+// olmayan ozel durumlar icin hesaplama yapilmaz, kullaniciya tarifeyi elle
+// kontrol etmesi soylenir.
 // ---------------------------------------------------------------------------
 const AAUT_KAYNAK_URL = "https://www.resmigazete.gov.tr/eskiler/2025/11/20251104-9-1.pdf";
+
+// Tablo 2 — konusu para olan islerde dava degerine gore kademeli oran.
 const AAUT_DILIMLERI = [
   { limit: 600000, oran: 0.16 },
   { limit: 1200000, oran: 0.15 },
@@ -134,24 +138,50 @@ const AAUT_DILIMLERI = [
   { limit: Infinity, oran: 0.01 },
 ];
 
-const AAUT_MAKTU_UCRETLER = [
-  { ad: "İcra dairelerinde takip (maktu, asıl alacağı geçemez)", tutar: 9000 },
-  { ad: "Tahliyeye ilişkin icra takibi", tutar: 20000 },
-  { ad: "Dilekçe / ihtarname düzenlenmesi", tutar: 6500 },
-  { ad: "Kira sözleşmesi hazırlanması", tutar: 8000 },
-  { ad: "Büroda sözlü danışma (ilk saat)", tutar: 4000 },
-  { ad: "İlk derece mahkemelerinde (duruşmalı) takip", tutar: 45000 },
-  { ad: "Boşanma davası (asgari)", tutar: 45000 },
-  { ad: "İdare/vergi mahkemesi (duruşmasız)", tutar: 30000 },
+// Tablo 1 — konusu para olmayan/degerlendirilemeyen islerde, davanin
+// goruldugu mahkemeye gore maktu ucret (Ikinci Kisim Ikinci Bolum).
+const AAUT_TABLO1 = [
+  { id: "icra_daireleri", ad: "İcra Daireleri", tutar: 9000 },
+  { id: "icra_mahkemeleri_is", ad: "İcra Mahkemeleri (iş)", tutar: 11000 },
+  { id: "icra_mahkemeleri_dava", ad: "İcra Mahkemeleri (dava/duruşmalı)", tutar: 18000 },
+  { id: "icra_tahliye", ad: "Tahliyeye İlişkin İcra Takipleri", tutar: 20000 },
+  { id: "icra_mahkemeleri_ceza", ad: "İcra Mahkemeleri (ceza işleri)", tutar: 15000 },
+  { id: "sulh_hukuk", ad: "Sulh Hukuk Mahkemeleri", tutar: 30000 },
+  { id: "sulh_ceza_infaz", ad: "Sulh Ceza / İnfaz Hakimlikleri", tutar: 18000 },
+  { id: "asliye", ad: "Asliye Mahkemeleri", tutar: 45000 },
+  { id: "tuketici", ad: "Tüketici Mahkemeleri", tutar: 22500 },
+  { id: "fikri_sinai", ad: "Fikri ve Sınai Haklar Mahkemeleri", tutar: 55000 },
+  { id: "agir_ceza", ad: "Ağır Ceza Mahkemeleri", tutar: 65000 },
+  { id: "cocuk", ad: "Çocuk Mahkemeleri", tutar: 45000 },
+  { id: "cocuk_agir_ceza", ad: "Çocuk Ağır Ceza Mahkemeleri", tutar: 65000 },
+  { id: "idare_vergi_durusmasiz", ad: "İdare/Vergi Mahkemeleri (duruşmasız)", tutar: 30000 },
+  { id: "idare_vergi_durusmali", ad: "İdare/Vergi Mahkemeleri (duruşmalı)", tutar: 40000 },
+  { id: "bam_bim_ilk", ad: "BAM/BİM İlk Derece", tutar: 35000 },
+  { id: "bam_bim_istinaf_tek", ad: "BAM/BİM İstinaf (tek duruşma)", tutar: 22000 },
+  { id: "bam_bim_istinaf_coklu", ad: "BAM/BİM İstinaf (çoklu duruşma/keşif)", tutar: 42000 },
+  { id: "yargitay_ilk", ad: "Yargıtay İlk Derece", tutar: 65000 },
+  { id: "danistay_durusmasiz", ad: "Danıştay İlk Derece (duruşmasız)", tutar: 40000 },
+  { id: "danistay_durusmali", ad: "Danıştay İlk Derece (duruşmalı)", tutar: 65000 },
+  { id: "temyiz_durusmasi", ad: "Yargıtay/Danıştay/Sayıştay Temyiz Duruşması", tutar: 40000 },
+  { id: "uyusmazlik", ad: "Uyuşmazlık Mahkemesi", tutar: 40000 },
+  { id: "aym_yuce_divan", ad: "AYM Yüce Divan", tutar: 120000 },
+  { id: "aym_bireysel_durusmasiz", ad: "AYM Bireysel Başvuru (duruşmasız)", tutar: 40000 },
+  { id: "aym_bireysel_durusmali", ad: "AYM Bireysel Başvuru (duruşmalı)", tutar: 80000 },
+  { id: "aym_bireysel_diger", ad: "AYM Bireysel Başvuru (diğer)", tutar: 90000 },
 ];
 
-function hesaplaAAUT() {
-  const deger = parseFloat(document.getElementById("aaut-deger").value);
-  const box = document.getElementById("aaut-sonuc");
-  if (!deger || deger <= 0) {
-    showToast("Geçerli bir dava değeri girin.");
-    return;
-  }
+function initAautMahkemeSelect() {
+  const sel = document.getElementById("aaut-mahkeme");
+  if (!sel || sel.options.length) return;
+  sel.innerHTML = AAUT_TABLO1.map((m) => `<option value="${m.id}">${m.ad} (${formatTL(m.tutar)})</option>`).join("");
+}
+
+function toggleAautDeger() {
+  const paraOlan = document.getElementById("aaut-para-olcumu").value === "olan";
+  document.getElementById("aaut-deger-alani").classList.toggle("hidden", !paraOlan);
+}
+
+function aautTablo2Hesapla(deger) {
   let kalan = deger;
   let alt = 0;
   let toplam = 0;
@@ -166,16 +196,80 @@ function hesaplaAAUT() {
     kalan -= buDilim;
     alt = dilim.limit;
   }
-  const maktuHtml = AAUT_MAKTU_UCRETLER.map((m) => `<li>${m.ad}: <strong>${formatTL(m.tutar)}</strong></li>`).join("");
+  return { toplam, satirlar };
+}
+
+function hesaplaAAUT() {
+  const mahkeme = AAUT_TABLO1.find((m) => m.id === document.getElementById("aaut-mahkeme").value);
+  const paraOlan = document.getElementById("aaut-para-olcumu").value === "olan";
+  const ozelDurum = document.getElementById("aaut-ozel-durum").value;
+  const box = document.getElementById("aaut-sonuc");
+  if (!mahkeme) {
+    showToast("Dava/iş türünü seçin.");
+    return;
+  }
+
+  let taban = 0;
+  let tabloAciklama = "";
+
+  if (!paraOlan) {
+    taban = mahkeme.tutar;
+    tabloAciklama = `Tablo 1 — ${mahkeme.ad}: <strong>${formatTL(mahkeme.tutar)}</strong> (konusu para ile ölçülemeyen işler).`;
+  } else {
+    const deger = parseFloat(document.getElementById("aaut-deger").value);
+    if (!deger || deger <= 0) {
+      showToast("Geçerli bir dava değeri girin.");
+      return;
+    }
+    if (mahkeme.id === "icra_daireleri" && deger <= 56250) {
+      taban = mahkeme.tutar;
+      tabloAciklama = `Madde 11 — takip miktarı ${formatTL(56250)}'ye kadar olduğu için maktu ücret esas alındı: <strong>${formatTL(mahkeme.tutar)}</strong>.`;
+    } else {
+      const nispi = aautTablo2Hesapla(deger);
+      if (nispi.toplam >= mahkeme.tutar) {
+        taban = nispi.toplam;
+        tabloAciklama = `Tablo 2 (nispi) — <strong>${formatTL(nispi.toplam)}</strong>, Tablo 1 maktu ücretten (${formatTL(mahkeme.tutar)}) düşük olamayacağı için nispi tutar esas alındı (Madde 13).<br><span class="text-slate-400">${nispi.satirlar.join(" · ")}</span>`;
+      } else {
+        taban = mahkeme.tutar;
+        tabloAciklama = `Tablo 1 maktu ücret — <strong>${formatTL(mahkeme.tutar)}</strong>, hesaplanan nispi tutardan (${formatTL(nispi.toplam)}) yüksek olduğu için esas alındı (Madde 13 — nispi ücret maktu ücretin altına düşemez).`;
+      }
+    }
+  }
+
+  let sonuc = taban;
+  let ozelAciklama = "";
+  if (ozelDurum === "madde6_yarisi") {
+    sonuc = taban * 0.5;
+    ozelAciklama = "Madde 6: Ön inceleme duruşması/tutanağından önce feragat, kabul veya sulh ile sonuçlandığı için ücretin yarısı uygulandı.";
+  } else if (ozelDurum === "madde7_yarisi") {
+    sonuc = Math.min(taban * 0.5, mahkeme.tutar);
+    ozelAciklama = `Madde 7: Tutanaktan önce görevsizlik/yetkisizlik/husumet nedeniyle ret — ücretin yarısı, Tablo 1 mahkeme ücretini (${formatTL(mahkeme.tutar)}) geçemez.`;
+  } else if (ozelDurum === "madde7_tamami") {
+    sonuc = Math.min(taban, mahkeme.tutar);
+    ozelAciklama = `Madde 7: Tutanaktan sonra görevsizlik/yetkisizlik/husumet nedeniyle ret — ücretin tamamı, Tablo 1 mahkeme ücretini (${formatTL(mahkeme.tutar)}) geçemez.`;
+  } else if (ozelDurum === "madde11_pesin") {
+    sonuc = taban * 0.75;
+    ozelAciklama = "Madde 11: Borçlu, ödeme/icra emrindeki süre içinde borcunu öderse ücretin 3/4'ü uygulanır.";
+  } else if (ozelDurum === "madde16_arabuluculuk") {
+    if (paraOlan) {
+      const deger = parseFloat(document.getElementById("aaut-deger").value) || 0;
+      const esas = deger <= 50000 ? mahkeme.tutar : aautTablo2Hesapla(deger).toplam;
+      sonuc = Math.min(esas * 1.25, deger);
+      ozelAciklama = `Madde 16: Dava şartı arabuluculukta anlaşma sağlandığı için esas tutarın 1/4 fazlası uygulandı, asıl alacağı (${formatTL(deger)}) geçemez.`;
+    } else {
+      sonuc = mahkeme.tutar * 1.25;
+      ozelAciklama = "Madde 16: Dava şartı arabuluculukta anlaşma sağlandığı için Tablo 1 maktu ücretin 1/4 fazlası uygulandı.";
+    }
+  }
+
   box.innerHTML = `
-    <p class="font-bold text-indigo-900 mb-2">Nispi Vekalet Ücreti (tahmini): ${formatTL(toplam)}</p>
-    <p class="text-xs text-slate-500 mb-2">Dilim hesaplaması:</p>
-    <ul class="text-xs text-slate-600 list-disc list-inside space-y-0.5 mb-3">${satirlar.map((s) => `<li>${s}</li>`).join("")}</ul>
-    <p class="text-xs font-semibold text-slate-700 mb-1">Sık kullanılan maktu ücretler (2025-2026):</p>
-    <ul class="text-xs text-slate-600 list-disc list-inside space-y-0.5 mb-3">${maktuHtml}</ul>
+    <p class="font-bold text-indigo-900 mb-2">Hesaplanan vekalet ücreti: ${formatTL(sonuc)}</p>
+    <p class="text-xs text-slate-600 mb-2">${tabloAciklama}</p>
+    ${ozelAciklama ? `<p class="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-1.5 mb-2">${ozelAciklama}</p>` : ""}
     <p class="text-xs text-slate-400 border-t border-slate-100 pt-2">
-      Kaynak: 2025-2026 Avukatlık Asgari Ücret Tarifesi, Resmi Gazete Sayı: 33067, 04.11.2025 —
-      <a href="${AAUT_KAYNAK_URL}" target="_blank" class="text-indigo-600 hover:underline">tam metin <i class="fa-solid fa-arrow-up-right-from-square ml-0.5"></i></a>
+      Kaynak: Avukatlık Asgari Ücret Tarifesi, Resmi Gazete Sayı 33067, 4 Kasım 2025, Türkiye Barolar Birliği —
+      <a href="${AAUT_KAYNAK_URL}" target="_blank" class="text-indigo-600 hover:underline">tam metin <i class="fa-solid fa-arrow-up-right-from-square ml-0.5"></i></a>.
+      Bu araç yardımcı niteliktedir, nihai hesaplama avukata aittir.
     </p>
   `;
   box.classList.remove("hidden");

@@ -241,8 +241,12 @@ async function router() {
     await loadVekaletnamelerPage();
   } else if (route === "cari-hesap") {
     showPage("page-cari-hesap");
+    initAautMahkemeSelect();
     document.getElementById("aaut-sonuc").classList.add("hidden");
     document.getElementById("aaut-deger").value = "";
+    document.getElementById("aaut-para-olcumu").value = "olmayan";
+    document.getElementById("aaut-ozel-durum").value = "yok";
+    toggleAautDeger();
     await loadCariHesapPage();
   } else if (route === "icra-takip" && param) {
     showPage("page-icra-detay");

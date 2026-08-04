@@ -577,17 +577,40 @@
           <h3 class="font-bold">AAÜT Ücret Hesaplayıcı</h3>
           <div class="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 text-sm text-amber-900 flex items-start gap-2">
             <i class="fa-solid fa-triangle-exclamation mt-0.5"></i>
-            <span><strong>Bu hesaplayıcı yardımcı bir araçtır.</strong> 2025-2026 AAÜT'nin genel nispi ücret tarifesine dayanır; istisnai/özel durumlar (KDV, taraf sayısı, özel tarifeler vb.) içermeyebilir. Sonucu mutlaka güncel Resmi Gazete metniyle karşılaştırıp kendiniz doğrulayın.</span>
+            <span><strong>Bu hesaplayıcı yardımcı bir araçtır.</strong> Avukatlık Asgari Ücret Tarifesi (Resmi Gazete Sayı 33067, 4 Kasım 2025) Tablo 1 ve Tablo 2 rakamlarına dayanır. Listede olmayan özel durumlar için tarifeyi manuel kontrol edin; sonucu mutlaka Resmi Gazete metniyle karşılaştırın.</span>
           </div>
-          <div class="grid md:grid-cols-2 gap-4 items-end">
+          <div class="grid md:grid-cols-2 gap-4">
             <div>
+              <label class="block text-sm font-semibold mb-1">Dava / İş Türü (görüldüğü mahkeme)</label>
+              <select id="aaut-mahkeme" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm"></select>
+            </div>
+            <div>
+              <label class="block text-sm font-semibold mb-1">Konusu parayla ölçülebilir mi?</label>
+              <select id="aaut-para-olcumu" onchange="toggleAautDeger()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+                <option value="olmayan" selected>Hayır (Tablo 1 — maktu ücret)</option>
+                <option value="olan">Evet (Tablo 2 — dava değerine göre)</option>
+              </select>
+            </div>
+            <div id="aaut-deger-alani" class="hidden">
               <label class="block text-sm font-semibold mb-1">Dava Değeri (TL)</label>
               <input id="aaut-deger" type="number" min="0" step="0.01" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+              <p class="text-xs text-slate-400 mt-1">Tahliye, kira tespiti veya nafaka davalarında yıllık kira/nafaka tutarını girin (Madde 9).</p>
             </div>
-            <button onclick="hesaplaAAUT()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-6 rounded-lg">
-              Hesapla
-            </button>
+            <div>
+              <label class="block text-sm font-semibold mb-1">Özel Durum</label>
+              <select id="aaut-ozel-durum" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+                <option value="yok" selected>Yok — tam ücret</option>
+                <option value="madde6_yarisi">Ön inceleme tutanağından önce feragat/kabul/sulh (Madde 6 — yarısı)</option>
+                <option value="madde7_yarisi">Tutanaktan önce görevsizlik/yetkisizlik/husumet reddi (Madde 7 — yarısı)</option>
+                <option value="madde7_tamami">Tutanaktan sonra görevsizlik/yetkisizlik/husumet reddi (Madde 7 — tamamı)</option>
+                <option value="madde11_pesin">İcra: borçlu süresinde öderse (Madde 11 — 3/4'ü)</option>
+                <option value="madde16_arabuluculuk">Dava şartı arabuluculukta anlaşma sağlandı (Madde 16)</option>
+              </select>
+            </div>
           </div>
+          <button onclick="hesaplaAAUT()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-6 rounded-lg">
+            Hesapla
+          </button>
           <div id="aaut-sonuc" class="hidden bg-indigo-50/50 border border-indigo-100 rounded-xl p-4 text-sm"></div>
         </div>
       </div>
