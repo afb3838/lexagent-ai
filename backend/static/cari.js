@@ -92,12 +92,16 @@ function toggleCariHesapForm() {
   }
 }
 
+let cariKaydiGonderiliyor = false;
+
 async function submitCariHesapKaydi() {
+  if (cariKaydiGonderiliyor) return;
   const tutar = document.getElementById("cari-tutar").value;
   if (!tutar || Number(tutar) <= 0) {
     showToast("Geçerli bir tutar girin.");
     return;
   }
+  cariKaydiGonderiliyor = true;
   try {
     await api.createCariHesapKaydi(currentDosyaId, {
       tur: document.getElementById("cari-tur").value,
@@ -110,6 +114,8 @@ async function submitCariHesapKaydi() {
     await loadDosyaCariHesap(currentDosyaId);
   } catch (err) {
     showToast("Eklenemedi: " + err.message);
+  } finally {
+    cariKaydiGonderiliyor = false;
   }
 }
 

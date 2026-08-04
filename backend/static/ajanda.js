@@ -187,13 +187,17 @@ async function populateEtkinlikDosyaSelect(presetDosyaId) {
   }
 }
 
+let etkinlikGonderiliyor = false;
+
 async function submitEtkinlik() {
+  if (etkinlikGonderiliyor) return;
   const baslik = document.getElementById("etkinlik-baslik").value.trim();
   const tarih = document.getElementById("etkinlik-tarih").value;
   if (!baslik || !tarih) {
     showToast("Başlık ve tarih zorunlu.");
     return;
   }
+  etkinlikGonderiliyor = true;
   try {
     await api.createEtkinlik({
       baslik,
@@ -212,5 +216,7 @@ async function submitEtkinlik() {
     }
   } catch (err) {
     showToast("Eklenemedi: " + err.message);
+  } finally {
+    etkinlikGonderiliyor = false;
   }
 }

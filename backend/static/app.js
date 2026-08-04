@@ -170,9 +170,13 @@ function closePlanModal() {
   modal.classList.remove("flex");
 }
 
+let planTalebiGonderiliyor = false;
+
 async function submitPlanTalebi() {
+  if (planTalebiGonderiliyor) return;
   const errBox = document.getElementById("plan-modal-error");
   errBox.classList.add("hidden");
+  planTalebiGonderiliyor = true;
   try {
     await api.planTalebi({
       plan: selectedPlanForModal,
@@ -186,6 +190,8 @@ async function submitPlanTalebi() {
   } catch (err) {
     errBox.textContent = "Gönderilemedi: " + err.message;
     errBox.classList.remove("hidden");
+  } finally {
+    planTalebiGonderiliyor = false;
   }
 }
 
@@ -346,7 +352,10 @@ async function celiskiKontrolu(muvekkil_adi, karsi_taraf) {
   );
 }
 
+let dosyaGonderiliyor = false;
+
 async function submitNewDosya() {
+  if (dosyaGonderiliyor) return;
   const muvekkil_adi = document.getElementById("new-muvekkil").value.trim();
   const karsi_taraf = document.getElementById("new-karsi-taraf").value.trim();
   if (!muvekkil_adi) {
@@ -354,6 +363,7 @@ async function submitNewDosya() {
     return;
   }
   if (!(await celiskiKontrolu(muvekkil_adi, karsi_taraf))) return;
+  dosyaGonderiliyor = true;
   try {
     const dosya = await api.createDosya({
       muvekkil_adi,
@@ -366,6 +376,8 @@ async function submitNewDosya() {
     location.hash = "#/dosyalar/" + dosya.id;
   } catch (err) {
     showToast("Dosya oluşturulamadı: " + err.message);
+  } finally {
+    dosyaGonderiliyor = false;
   }
 }
 

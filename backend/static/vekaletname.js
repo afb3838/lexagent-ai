@@ -142,8 +142,12 @@ async function vekaletnameDosyaSecildi(e) {
   }
 }
 
+let vekaletnameGonderiliyor = false;
+
 async function submitVekaletname() {
+  if (vekaletnameGonderiliyor) return;
   const file = document.getElementById("vekaletname-dosya").files[0];
+  vekaletnameGonderiliyor = true;
   try {
     await api.createVekaletname(
       currentDosyaId,
@@ -165,5 +169,7 @@ async function submitVekaletname() {
     await loadDosyaVekaletname(currentDosyaId);
   } catch (err) {
     showToast("Kaydedilemedi: " + err.message);
+  } finally {
+    vekaletnameGonderiliyor = false;
   }
 }

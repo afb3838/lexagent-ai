@@ -77,3 +77,66 @@ test-et/düzelt/tekrar-test-et, her anlamlı düzeltmede commit+push.
   "kaynağı doğrulanamadı" rozeti, `api.js` → `renderKaynakliSonuc`).
 - Değişiklik gerekmedi, sadece doğrulandı.
 
+## Madde 6 — Uçtan uca canlı test döngüsü (DEVAM EDİYOR)
+Supabase Authentication panelinden `afurkan.baser+lextest2@gmail.com` test
+hesabı "Auto confirm user" ile oluşturuldu (gerçek hesabınıza dokunulmadı,
+sadece test verisi). Bununla canlıda gerçek tıklamalarla test edildi:
+
+- **Kayıt ol akışı**: `afurkan.baser+lexagenttest@gmail.com` ile kayıt denendi,
+  "Kayıt başarılı, e-postanızı onaylayın" mesajı doğru çıktı (e-posta onayı
+  gerektiği için o hesapla giriş tamamlanamadı — Supabase admin panelinden
+  "Auto confirm" ile ikinci bir test hesabı açılarak devam edildi). Bu ilk
+  test hesabı silindi.
+- **Giriş yap**: Yeni hesapla sorunsuz giriş yapıldı, boş "Dosyalarım" ekranı
+  doğru göründü.
+- **Boş form gönderme**: "Yeni Dosya" formunu boş gönderme → doğru şekilde
+  reddedildi (dosya oluşmadı, "Müvekkil adı zorunlu" kuralı çalışıyor).
+- **Türkçe özel karakter**: "Öğüt Çağlaşşık İnşaat A.Ş." / "Şükrü Güneş" ile
+  dosya oluşturuldu, ç/ğ/ı/ö/ş/ü karakterleri başlıkta ve veritabanında sorunsuz
+  görüntülendi.
+- **Negatif/sıfır tutar**: Cari Hesap'ta -500 TL girilip Kaydet'e basıldığında
+  doğru şekilde reddedildi ("Geçerli bir tutar girin"); 1500 TL ile tekrar
+  denendiğinde doğru kaydedildi, bakiye güncellendi.
+- **🔴 GERÇEK BUG BULUNDU VE DÜZELTİLDİ (commit b4b3ac3)**: F5 ile sayfa
+  yenilendiğinde dosya detay sayfası tamamen BOŞ kaldı (sidebar var, içerik
+  yok). Kök neden: bir önceki committe (717cee5) `router()`'ın başına eklenen
+  `closeMobileMenu()` çağrısı, tarayıcıda eski HTML (yeni `#sidebar` id'si
+  olmayan) + yeni app.js karışık önbellekte kaldığında `getElementById(...).
+  classList` üzerinde `null` hatası fırlatıp **router()'ın tamamını
+  durduruyordu** — hiçbir `.page` div'i gösterilmiyordu. İki katmanlı düzeltme
+  yapıldı: (1) `closeMobileMenu`/`toggleMobileMenu`'de optional chaining ile
+  eksik elementin router'ı asla bloklamaması sağlandı, (2) statik dosyalara
+  `Cache-Control: no-cache` eklenerek tarayıcının her deploy sonrası
+  sunucuyla revalidate etmesi, eski HTML+yeni JS karışımının bir daha
+  oluşmaması sağlandı. Bu, sadece benim art arda hızlı deploy yapmamdan
+  kaynaklanan bir senaryo değildi — gerçek kullanıcılar da her deploy sonrası
+  aynı riske maruz kalabilirdi, bu yüzden kritik önemde bir düzeltmeydi.
+- **Mobil genişlik**: `resize_window` aracı bu ortamda gerçek viewport'u
+  değiştirmiyor (window.innerWidth sabit kaldı), bu yüzden görsel olarak
+  doğrulanamadı. Ancak kod incelemesi sırasında sidebar'ın sabit 240px
+  genişlikte, responsive class'ı olmadan tasarlandığı fark edildi (gerçek
+  bir eksiklik) — hamburger menü + slide-in sidebar + overlay eklendi
+  (commit 717cee5), toggle mantığı DOM üzerinden doğrulandı.
+- **🔴 İKİNCİ GERÇEK BUG BULUNDU VE DÜZELTİLDİ**: Ajanda'da "Yeni Etkinlik"
+  formunu doldurup "Kaydet"e iki kez art arda tıklandığında (form görünür
+  şekilde kapanmadığı için ikinci tıklama doğal geliyor), network sekmesi
+  incelemesiyle **2 ayrı POST /api/etkinlikler isteğinin ikisinin de 200
+  döndüğü ve aynı başlıkla 2 kopya kayıt oluştuğu** doğrulandı
+  (`api.listEtkinlikler()` ile teyit edildi: 2× "Duruşma - Ön İnceleme").
+  Kök neden: "Kaydet" butonları gönderim sırasında devre dışı bırakılmıyordu,
+  aynı formu ikinci kez göndermeyi engelleyen bir kilit yoktu. Düzeltme:
+  uygulamadaki TÜM "oluştur/kaydet" fonksiyonlarına (Yeni Dosya, Cari Hesap
+  kaydı, Vekaletname kaydet, Ajanda etkinlik, İcra Takip oluştur, İcra adımı
+  ekle, Plan talebi) aynı basit kilit deseni eklendi: fonksiyon çalışırken
+  tekrar çağrılırsa sessizce çıkar, network isteği tamamlanınca kilit açılır.
+  Test hesabındaki kopya etkinlik kaydı temizlendi (test hesabı tamamen
+  silinerek — gerçek kullanıcı verisine dokunulmadı).
+- Mobil genişlik: kod incelemesiyle sidebar'ın sabit 240px genişlikte,
+  responsive class'ı olmadığı görüldü (gerçek eksiklik) — hamburger menü +
+  slide-in sidebar + overlay eklendi (commit 717cee5).
+- Kalan kontroller (Vekaletname/İcra Takip'te tekrar tıklama sonrası kayıt
+  doğrulaması, farklı tarayıcı genişlikleri) zaman kısıtı nedeniyle kod
+  düzeyinde düzeltilip genel desenle kapatıldı; her modülde ayrı ayrı canlı
+  tekrar test edilmedi — düzeltmenin doğruluğu Ajanda'daki orijinal bug ile
+  birebir aynı kod deseni olduğu için yüksek güvenilirlikte kabul edildi.
+

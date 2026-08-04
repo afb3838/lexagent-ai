@@ -66,13 +66,17 @@ function closeNewIcraForm() {
   );
 }
 
+let icraGonderiliyor = false;
+
 async function submitNewIcra() {
+  if (icraGonderiliyor) return;
   const borclu_adi = document.getElementById("new-icra-borclu").value.trim();
   const alacakli_adi = document.getElementById("new-icra-alacakli").value.trim();
   if (!borclu_adi || !alacakli_adi) {
     showToast("Borçlu ve alacaklı zorunlu.");
     return;
   }
+  icraGonderiliyor = true;
   try {
     const icra = await api.createIcra({
       borclu_adi,
@@ -85,6 +89,8 @@ async function submitNewIcra() {
     location.hash = "#/icra-takip/" + icra.id;
   } catch (err) {
     showToast("Oluşturulamadı: " + err.message);
+  } finally {
+    icraGonderiliyor = false;
   }
 }
 
@@ -150,12 +156,16 @@ function toggleIcraAdimForm() {
   }
 }
 
+let icraAdimGonderiliyor = false;
+
 async function submitIcraAdim() {
+  if (icraAdimGonderiliyor) return;
   const tarih = document.getElementById("icra-adim-tarih").value;
   if (!tarih) {
     showToast("Tarih zorunlu.");
     return;
   }
+  icraAdimGonderiliyor = true;
   try {
     await api.createIcraAdim(currentIcraId, {
       tarih,
@@ -169,5 +179,7 @@ async function submitIcraAdim() {
     renderIcra(icra);
   } catch (err) {
     showToast("Eklenemedi: " + err.message);
+  } finally {
+    icraAdimGonderiliyor = false;
   }
 }
