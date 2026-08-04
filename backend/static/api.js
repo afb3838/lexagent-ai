@@ -295,6 +295,14 @@ const api = {
     const res = await authedFetch("/api/research/dogrula", { method: "POST", body: toFormData({ metin }) });
     return res.json();
   },
+  async getProfil() {
+    const res = await authedFetch("/api/profil");
+    return res.json();
+  },
+  async planTalebi(fields) {
+    const res = await authedFetch("/api/plan-talebi", { method: "POST", body: toFormData(fields) });
+    return res.json();
+  },
 };
 
 // Kaynaksiz, sade metin sonuclarini (belge risk analizi gibi) paragraf

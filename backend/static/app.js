@@ -25,11 +25,36 @@ const PAGE_TITLES = {
   mevzuat: "Mevzuat",
 };
 
+const PLAN_LABELS_JS = {
+  deneme: "Deneme",
+  baslangic: "Başlangıç",
+  profesyonel: "Profesyonel",
+  kurumsal: "Kurumsal",
+};
+
 function showToast(msg) {
   const t = document.getElementById("toast");
   t.textContent = msg;
   t.classList.remove("translate-y-20", "opacity-0");
   setTimeout(() => t.classList.add("translate-y-20", "opacity-0"), 3000);
+}
+
+// ---------------------------------------------------------------------------
+// Public landing sayfasi yardimcilari
+// ---------------------------------------------------------------------------
+function scrollToId(id) {
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function showAuthTab(tab) {
+  const isLogin = tab === "login";
+  document.getElementById("auth-form-login").classList.toggle("hidden", !isLogin);
+  document.getElementById("auth-form-signup").classList.toggle("hidden", isLogin);
+  document.getElementById("auth-tab-login").className =
+    "flex-1 py-2 rounded-md " + (isLogin ? "bg-white shadow-sm font-semibold text-slate-800" : "text-slate-500");
+  document.getElementById("auth-tab-signup").className =
+    "flex-1 py-2 rounded-md " + (!isLogin ? "bg-white shadow-sm font-semibold text-slate-800" : "text-slate-500");
 }
 
 // ---------------------------------------------------------------------------
@@ -47,17 +72,53 @@ async function handleLogin() {
   }
 }
 
+async function handleSignup() {
+  const ad_soyad = document.getElementById("signup-name").value.trim();
+  const email = document.getElementById("signup-email").value.trim();
+  const password = document.getElementById("signup-password").value;
+  const errBox = document.getElementById("signup-error");
+  const okBox = document.getElementById("signup-success");
+  errBox.classList.add("hidden");
+  okBox.classList.add("hidden");
+  if (!email || !password) {
+    errBox.textContent = "E-posta ve şifre zorunlu.";
+    errBox.classList.remove("hidden");
+    return;
+  }
+  if (password.length < 6) {
+    errBox.textContent = "Şifre en az 6 karakter olmalı.";
+    errBox.classList.remove("hidden");
+    return;
+  }
+  const { data, error } = await supabaseClient.auth.signUp({
+    email,
+    password,
+    options: { data: { ad_soyad } },
+  });
+  if (error) {
+    errBox.textContent = "Kayıt başarısız: " + error.message;
+    errBox.classList.remove("hidden");
+    return;
+  }
+  if (!data.session) {
+    okBox.textContent = "Kayıt başarılı! E-postanıza gelen bağlantıyla hesabınızı onaylayıp giriş yapabilirsiniz.";
+    okBox.classList.remove("hidden");
+  }
+  // data.session doluysa onAuthStateChange zaten onSignedIn'i tetikler.
+}
+
 async function handleLogout() {
   await supabaseClient.auth.signOut();
 }
 
 async function onSignedIn(session) {
-  document.getElementById("view-login").classList.add("hidden");
+  document.getElementById("view-public").classList.add("hidden");
   document.getElementById("app-shell").classList.remove("hidden");
   document.getElementById("app-shell").classList.add("flex");
   document.getElementById("user-email").textContent = session.user.email;
   document.getElementById("user-email").classList.remove("hidden");
   document.getElementById("logout-btn").classList.remove("hidden");
+  loadPlanBadge();
   if (!location.hash) location.hash = "#/dosyalar";
   else await router();
 }
@@ -65,7 +126,66 @@ async function onSignedIn(session) {
 function onSignedOut() {
   document.getElementById("app-shell").classList.add("hidden");
   document.getElementById("app-shell").classList.remove("flex");
-  document.getElementById("view-login").classList.remove("hidden");
+  document.getElementById("view-public").classList.remove("hidden");
+  document.getElementById("plan-badge").classList.add("hidden");
+  showAuthTab("login");
+}
+
+// ---------------------------------------------------------------------------
+// Abonelik plani
+// ---------------------------------------------------------------------------
+let selectedPlanForModal = "profesyonel";
+
+async function loadPlanBadge() {
+  const badge = document.getElementById("plan-badge");
+  try {
+    const profil = await api.getProfil();
+    let text = profil.plan_etiketi || "Deneme";
+    if (profil.plan === "deneme" && profil.deneme_bitis) {
+      const kalanGun = Math.max(0, Math.ceil((new Date(profil.deneme_bitis) - new Date()) / 86400000));
+      text += ` · ${kalanGun} gün kaldı`;
+    }
+    document.getElementById("plan-badge-text").textContent = text;
+    badge.classList.remove("hidden");
+  } catch (err) {
+    badge.classList.add("hidden");
+  }
+}
+
+function openPlanModal(plan) {
+  selectedPlanForModal = plan || "profesyonel";
+  document.getElementById("plan-modal-plan-label").textContent = PLAN_LABELS_JS[selectedPlanForModal] || selectedPlanForModal;
+  document.getElementById("plan-modal-error").classList.add("hidden");
+  document.getElementById("plan-modal-telefon").value = "";
+  document.getElementById("plan-modal-mesaj").value = "";
+  const modal = document.getElementById("plan-modal");
+  modal.classList.remove("hidden");
+  modal.classList.add("flex");
+}
+
+function closePlanModal() {
+  const modal = document.getElementById("plan-modal");
+  modal.classList.add("hidden");
+  modal.classList.remove("flex");
+}
+
+async function submitPlanTalebi() {
+  const errBox = document.getElementById("plan-modal-error");
+  errBox.classList.add("hidden");
+  try {
+    await api.planTalebi({
+      plan: selectedPlanForModal,
+      ad_soyad: "",
+      eposta: document.getElementById("user-email").textContent || "",
+      telefon: document.getElementById("plan-modal-telefon").value.trim(),
+      mesaj: document.getElementById("plan-modal-mesaj").value.trim(),
+    });
+    closePlanModal();
+    showToast("Talebiniz alındı, en kısa sürede sizinle iletişime geçilecek.");
+  } catch (err) {
+    errBox.textContent = "Gönderilemedi: " + err.message;
+    errBox.classList.remove("hidden");
+  }
 }
 
 supabaseClient.auth.onAuthStateChange((_event, session) => {

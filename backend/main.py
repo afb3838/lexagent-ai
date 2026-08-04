@@ -8,6 +8,7 @@ import re
 import secrets
 import uuid
 import zipfile
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
 import httpx
@@ -1013,6 +1014,53 @@ async def get_musteri_gorunumu(token: str):
         "son_durum_ozeti": dosya.get("son_durum_ozeti"),
         "belgeler": [{"ad": b["ad"], "tur": b["tur"], "created_at": b["created_at"]} for b in belgeler],
     }
+
+
+PLAN_LABELS = {
+    "deneme": "Deneme",
+    "baslangic": "Başlangıç",
+    "profesyonel": "Profesyonel",
+    "kurumsal": "Kurumsal",
+}
+
+
+async def get_or_create_profil(user: dict) -> dict:
+    profil = await db.select_one("profiller", {"user_id": f"eq.{user['id']}"})
+    if profil:
+        return profil
+    deneme_bitis = (datetime.now(timezone.utc) + timedelta(days=14)).isoformat()
+    return await db.insert("profiller", {"user_id": user["id"], "deneme_bitis": deneme_bitis})
+
+
+@app.get("/api/profil")
+async def get_profil(user: dict = Depends(get_current_user)):
+    profil = await get_or_create_profil(user)
+    return {**profil, "plan_etiketi": PLAN_LABELS.get(profil.get("plan"), profil.get("plan"))}
+
+
+@app.post("/api/plan-talebi")
+async def create_plan_talebi(
+    plan: str = Form(...),
+    ad_soyad: str = Form(""),
+    eposta: str = Form(""),
+    telefon: str = Form(""),
+    mesaj: str = Form(""),
+    user: dict = Depends(get_current_user),
+):
+    if plan not in PLAN_LABELS:
+        raise HTTPException(400, "Gecersiz plan.")
+    row = await db.insert(
+        "plan_talepleri",
+        {
+            "user_id": user["id"],
+            "plan": plan,
+            "ad_soyad": ad_soyad,
+            "eposta": eposta or user.get("email") or "",
+            "telefon": telefon,
+            "mesaj": mesaj,
+        },
+    )
+    return row
 
 
 @app.get("/api/health")
