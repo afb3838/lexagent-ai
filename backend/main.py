@@ -165,6 +165,79 @@ async def call_gemini(system_prompt: str, user_prompt: str, use_search: bool):
     return text, sources
 
 
+KUNYE_PATTERN = re.compile(
+    r"(Esas\s*No\s*[:.]?\s*\d{2,4}\s*/\s*\d+|Karar\s*No\s*[:.]?\s*\d{2,4}\s*/\s*\d+|\b\d{2,4}\s*/\s*\d+\s*E\.|\b\d{2,4}\s*/\s*\d+\s*K\.)",
+    re.IGNORECASE,
+)
+
+
+def bul_dogrulanmamis_kunyeler(text: str, grounding_supports: list) -> list:
+    """groundingSupports, Gemini'nin cevabindaki hangi metin araliklarinin
+    gercekten bir arama sonucuyla (grounding chunk) desteklendigini belirtir.
+    Metinde gecen her Esas/Karar kunyesinin bu desteklenen araliklarin icinde
+    olup olmadigini kontrol eder; olmayanlari "dogrulanamadi" olarak isaretler.
+    Bu, sadece modelin kendi metnine guvenmek yerine, API'nin kendi grounding
+    verisine dayanan kod seviyesinde bir kontroldur."""
+    grounded_ranges = []
+    for s in grounding_supports or []:
+        seg = s.get("segment", {}) or {}
+        start, end = seg.get("startIndex"), seg.get("endIndex")
+        chunk_idx = s.get("groundingChunkIndices") or []
+        if start is not None and end is not None and chunk_idx:
+            grounded_ranges.append((start, end))
+
+    unverified = []
+    for m in KUNYE_PATTERN.finditer(text):
+        kunye = m.group(0).strip()
+        span = m.span()
+        is_grounded = any(r[0] <= span[0] < r[1] or r[0] < span[1] <= r[1] for r in grounded_ranges)
+        if not is_grounded and kunye not in unverified:
+            unverified.append(kunye)
+    return unverified
+
+
+async def call_gemini_grounded(system_prompt: str, user_prompt: str):
+    """call_gemini ile ayni, ama halusinasyon kontrolu icin ham grounding
+    detaylarini (groundingSupports, groundingChunks) da dondurur. Sadece
+    /api/research'te kullanilir - digerleri call_gemini'yi kullanmaya devam eder."""
+    if not GEMINI_API_KEY:
+        raise HTTPException(500, "Sunucuda GEMINI_API_KEY tanimli degil. Render Environment ayarlarindan ekleyin.")
+
+    url = f"{GEMINI_BASE}/{MODEL_NAME}:generateContent?key={GEMINI_API_KEY}"
+    payload = {
+        "contents": [{"parts": [{"text": user_prompt}]}],
+        "systemInstruction": {"parts": [{"text": system_prompt}]},
+        "tools": [{"google_search": {}}],
+    }
+
+    async with httpx.AsyncClient(timeout=90) as client:
+        resp = await client.post(url, json=payload)
+
+    if resp.status_code != 200:
+        logger.error("Gemini API hatasi (%s): %s", resp.status_code, resp.text)
+        raise HTTPException(resp.status_code, friendly_gemini_error(resp.status_code))
+
+    data = resp.json()
+    candidates = data.get("candidates") or []
+    if not candidates:
+        raise HTTPException(502, "Yapay zeka servisi boş yanıt döndürdü. Lütfen tekrar deneyin.")
+
+    candidate = candidates[0]
+    parts = candidate.get("content", {}).get("parts", [])
+    text = "\n".join(p.get("text", "") for p in parts if "text" in p).strip()
+
+    grounding = candidate.get("groundingMetadata", {}) or {}
+    chunks = grounding.get("groundingChunks", []) or []
+    supports = grounding.get("groundingSupports", []) or []
+    sources = []
+    for chunk in chunks:
+        web = chunk.get("web", {})
+        if web.get("uri"):
+            sources.append({"title": web.get("title", web["uri"]), "uri": web["uri"]})
+
+    return text, sources, chunks, supports
+
+
 async def call_gemini_vision(system_prompt: str, user_prompt: str, file_bytes: bytes, mime_type: str) -> str:
     """Gemini'nin coklu-mod (metin+goruntu/PDF) anlama yetenegini kullanarak, metin
     katmani olmayan taranmis belgeleri "okur" (OCR + anlama tek adimda). Ayri bir
@@ -249,14 +322,25 @@ KURALLAR:
   tarafindan teyit edilmelidir" notunu ekle.
 - Turkce, sade ve net yaz."""
 
-VEKALETNAME_OCR_SYSTEM = """Sen bir hukuk burosunda vekaletname belgelerini inceleyen bir asistansin.
-Sana taranmis (goruntu tabanli, metin katmani olmayabilir) bir vekaletname belgesi veriliyor.
+VEKALETNAME_EXTRACTION_SYSTEM = """Sen bir hukuk burosunda vekaletname belgelerini inceleyen bir asistansin.
+Sana bir vekaletname belgesinin metni veya goruntusu veriliyor (taranmis/goruntu tabanli olabilir).
 Belgeyi dikkatlice oku ve SADECE su alanlari iceren gecerli bir JSON nesnesi dondur:
 
-{"veren_tarih": "YYYY-MM-DD" veya null, "ozel_yetkiler": "kisa liste, orn: Temyiz, Sulh, Ibra" veya null, "ozet": "1-2 cumlelik kisa aciklama (kime, hangi kapsamda verildigi)" veya null}
+{
+  "vekil_adi": "avukatin (vekilin) adi soyadi veya null",
+  "muvekkil_adi": "vekaleti verenin (muvekkilin) adi soyadi veya null",
+  "muvekkil_tc": "muvekkilin TC kimlik numarasi (11 hane) veya null",
+  "muvekkil_adres": "muvekkilin adresi veya null",
+  "ozel_yetkiler": "kisa liste, orn: Temyiz, Sulh, Ibra, Ahzu Kabz veya null",
+  "veren_tarih": "YYYY-MM-DD veya null",
+  "noter": "duzenleyen noterlik adi veya null",
+  "ozet": "1-2 cumlelik kisa aciklama veya null"
+}
 
-KURALLAR:
-- Sadece belgede gercekten okuyabildigin bilgileri doldur; emin olmadigin alanlari null birak, UYDURMA.
+KURALLAR (KESINLIKLE UY):
+- Sadece belgede gercekten okuyabildigin bilgileri doldur; bir alani okuyamiyorsan veya emin
+  degilsen o alani null birak. ASLA tahmini/uydurma bir isim, TC numarasi veya tarih yazma -
+  yanlis bir TC kimlik no veya isim ciddi sonuclara yol acabilir.
 - Baska hicbir metin ekleme, sadece JSON dondur (kod bloğu isaretleyicisi de ekleme)."""
 
 MEVZUAT_SYSTEM = """Sen Turk mevzuati konusunda uzman bir arastirma asistanisin. Kullanicinin arattigi
@@ -473,13 +557,26 @@ Olay / Evrak Ozeti:
 Bu uyusmazlikla dogrudan ilgili, gercek ve dogrulanabilir emsal kararlari ara ve listele.
 Uygulanacak kanun maddelerini de belirt."""
 
-    text, sources = await call_gemini(RESEARCH_SYSTEM, user_prompt, use_search=True)
+    text, sources, chunks, supports = await call_gemini_grounded(RESEARCH_SYSTEM, user_prompt)
+
+    if not chunks:
+        # Grounding hic gercek kaynak dondurmedi - modelin metnine guvenilemez,
+        # potansiyel olarak uydurma karar icerebilir. Metni HIC gostermeyip
+        # net bir "bulunamadi" mesaji dondur.
+        return {
+            "result": "Şu anda gerçek kaynaklardan doğrulanmış bir emsal karar bulunamadı. Lütfen birkaç dakika sonra tekrar deneyin veya farklı anahtar kelimelerle arayın.",
+            "sources": [],
+            "unverified_kunyeler": [],
+        }
+
+    unverified = bul_dogrulanmamis_kunyeler(text, supports)
+
     if dosya_id:
         await db.insert(
             "belgeler",
             {"dosya_id": dosya_id, "ad": "Emsal Arastirma Sonucu", "tur": "arastirma", "metin": text},
         )
-    return {"result": text, "sources": sources}
+    return {"result": text, "sources": sources, "unverified_kunyeler": unverified}
 
 
 @app.post("/api/draft")
@@ -609,19 +706,63 @@ async def patch_etkinlik(
     return rows[0]
 
 
+async def extract_vekaletname_fields(data: bytes, filename: str, content_type: str) -> dict:
+    """Vekaletname belgesinden yapilandirilmis alanlari cikarir. Metin katmani
+    varsa (normal PDF) o metni Gemini'ye gonderir; yoksa (taranmis/goruntu
+    tabanli) Gemini'nin coklu-mod anlama ozelligiyle dogrudan gorseli okur.
+    Hicbir alani UYDURMAZ - okuyamadigini null birakir (bkz. VEKALETNAME_EXTRACTION_SYSTEM)."""
+    content_type = (content_type or "").lower()
+    name_lower = (filename or "").lower()
+    extracted_text = ""
+    if name_lower.endswith(".pdf") or content_type == "application/pdf":
+        try:
+            extracted_text = extract_pdf_text(data)
+        except Exception:
+            extracted_text = ""
+
+    try:
+        if len(extracted_text.strip()) >= 50:
+            raw, _ = await call_gemini(VEKALETNAME_EXTRACTION_SYSTEM, extracted_text[:15000], use_search=False)
+        else:
+            mime = content_type or ("application/pdf" if name_lower.endswith(".pdf") else "image/jpeg")
+            raw = await call_gemini_vision(
+                VEKALETNAME_EXTRACTION_SYSTEM,
+                "Bu vekaletname belgesini incele ve istenen alanlari JSON olarak dondur.",
+                data,
+                mime,
+            )
+        cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw.strip())
+        return json.loads(cleaned)
+    except Exception:
+        return {}
+
+
+@app.post("/api/vekaletname-oku")
+async def vekaletname_oku(dosya: UploadFile = File(...), user: dict = Depends(get_current_user)):
+    """On-izleme: belgeyi kaydetmeden sadece alanlari cikarip dondurur, boylece
+    kullanici formu kontrol edip duzeltebilir, sonra ayrica kaydeder."""
+    data = await dosya.read()
+    fields = await extract_vekaletname_fields(data, dosya.filename, dosya.content_type)
+    return fields
+
+
 @app.post("/api/dosyalar/{dosya_id}/vekaletname")
 async def create_vekaletname(
     dosya_id: str,
+    vekil_adi: Optional[str] = Form(None),
+    muvekkil_adi: Optional[str] = Form(None),
+    muvekkil_tc: Optional[str] = Form(None),
+    muvekkil_adres: Optional[str] = Form(None),
     veren_tarih: Optional[str] = Form(None),
     gecerlilik_tarihi: Optional[str] = Form(None),
     ozel_yetkiler: Optional[str] = Form(None),
+    noter: Optional[str] = Form(None),
     notlar: Optional[str] = Form(None),
     dosya: Optional[UploadFile] = File(None),
     user: dict = Depends(get_current_user),
 ):
     await get_owned_dosya(dosya_id, user["id"])
     storage_path = None
-    ai_fields = {}
     if dosya is not None and dosya.filename:
         data = await dosya.read()
         try:
@@ -630,40 +771,18 @@ async def create_vekaletname(
         except Exception:
             pass
 
-        # Metin katmani var mi kontrol et (pypdf); yoksa (taranmis/goruntu tabanli
-        # belge) Gemini'nin coklu-mod anlama ozelligiyle OCR + alan cikarimi yap.
-        content_type = (dosya.content_type or "").lower()
-        name_lower = dosya.filename.lower()
-        extracted_text = ""
-        if name_lower.endswith(".pdf") or content_type == "application/pdf":
-            try:
-                extracted_text = extract_pdf_text(data)
-            except Exception:
-                extracted_text = ""
-
-        is_image = content_type.startswith("image/")
-        is_scanned_pdf = (name_lower.endswith(".pdf") or content_type == "application/pdf") and len(extracted_text.strip()) < 50
-        if is_image or is_scanned_pdf:
-            mime = content_type or "application/pdf"
-            try:
-                raw = await call_gemini_vision(
-                    VEKALETNAME_OCR_SYSTEM,
-                    "Bu vekaletname belgesini incele ve istenen alanlari JSON olarak dondur.",
-                    data,
-                    mime,
-                )
-                cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw.strip())
-                ai_fields = json.loads(cleaned)
-            except Exception:
-                ai_fields = {}
-
     row = {
         "kullanici_id": user["id"],
         "dosya_id": dosya_id,
-        "veren_tarih": veren_tarih or ai_fields.get("veren_tarih") or None,
+        "vekil_adi": vekil_adi or None,
+        "muvekkil_adi": muvekkil_adi or None,
+        "muvekkil_tc": muvekkil_tc or None,
+        "muvekkil_adres": muvekkil_adres or None,
+        "veren_tarih": veren_tarih or None,
         "gecerlilik_tarihi": gecerlilik_tarihi or None,
-        "ozel_yetkiler": ozel_yetkiler or ai_fields.get("ozel_yetkiler") or None,
-        "notlar": notlar or ai_fields.get("ozet") or None,
+        "ozel_yetkiler": ozel_yetkiler or None,
+        "noter": noter or None,
+        "notlar": notlar or None,
         "storage_path": storage_path,
     }
     return await db.insert("vekaletnameler", row)

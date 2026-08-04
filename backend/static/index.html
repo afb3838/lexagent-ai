@@ -202,7 +202,32 @@
           </div>
           <div id="vekaletname-durum-box"></div>
           <div id="vekaletname-form" class="hidden space-y-3 border-t border-slate-100 pt-4">
+            <div>
+              <label class="block text-sm font-semibold mb-1">Taranmış Belge (isteğe bağlı)</label>
+              <input id="vekaletname-dosya" type="file" accept=".pdf,.jpg,.jpeg,.png" class="w-full text-sm" onchange="vekaletnameDosyaSecildi(event)">
+              <p id="vekaletname-oku-durum" class="text-xs text-slate-500 mt-1">Belge seçtiğinizde alanlar otomatik okunup doldurulmaya çalışılır — okunamayan alanları siz tamamlayın, kaydetmeden önce kontrol edin.</p>
+            </div>
             <div class="grid md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-semibold mb-1">Vekil (Avukat) Adı</label>
+                <input id="vekaletname-vekil-adi" type="text" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+              </div>
+              <div>
+                <label class="block text-sm font-semibold mb-1">Müvekkil Adı</label>
+                <input id="vekaletname-muvekkil-adi" type="text" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+              </div>
+              <div>
+                <label class="block text-sm font-semibold mb-1">Müvekkil TC Kimlik No</label>
+                <input id="vekaletname-muvekkil-tc" type="text" maxlength="11" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+              </div>
+              <div>
+                <label class="block text-sm font-semibold mb-1">Düzenleyen Noter</label>
+                <input id="vekaletname-noter" type="text" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+              </div>
+              <div class="md:col-span-2">
+                <label class="block text-sm font-semibold mb-1">Müvekkil Adresi</label>
+                <input id="vekaletname-muvekkil-adres" type="text" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+              </div>
               <div>
                 <label class="block text-sm font-semibold mb-1">Veren Tarih</label>
                 <input id="vekaletname-veren-tarih" type="date" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
@@ -215,11 +240,6 @@
                 <label class="block text-sm font-semibold mb-1">Özel Yetkiler</label>
                 <input id="vekaletname-ozel-yetkiler" type="text" placeholder="Örn: Temyiz, Sulh, İbra, Ahzu Kabz"
                        class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
-              </div>
-              <div class="md:col-span-2">
-                <label class="block text-sm font-semibold mb-1">Taranmış Belge (isteğe bağlı)</label>
-                <input id="vekaletname-dosya" type="file" accept=".pdf,.jpg,.jpeg,.png" class="w-full text-sm">
-                <p class="text-xs text-slate-500 mt-1">Görüntü tabanlı (taranmış) belgeler otomatik olarak okunur ve tarih/özel yetki alanları boşsa doldurulur.</p>
               </div>
               <div class="md:col-span-2">
                 <label class="block text-sm font-semibold mb-1">Notlar</label>

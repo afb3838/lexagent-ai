@@ -52,7 +52,7 @@ function escapeHtml(str) {
 // gorunumu: kaynak linklerini chip olarak, metni okunakli paragraf kartlarina
 // bolerek gosterir; sonuc yoksa net bir "bulunamadi" karti gosterir (bos/kirik
 // gorunmesin diye).
-function renderKaynakliSonuc(sourcesElId, textElId, resultText, sources, noResultText) {
+function renderKaynakliSonuc(sourcesElId, textElId, resultText, sources, noResultText, unverifiedKunyeler) {
   const sourcesBox = document.getElementById(sourcesElId);
   const textBox = document.getElementById(textElId);
   const trimmed = (resultText || "").trim();
@@ -76,13 +76,21 @@ function renderKaynakliSonuc(sourcesElId, textElId, resultText, sources, noResul
         .join("")
     : `<p class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-1.5 inline-block"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Kaynak bağlantısı dönmedi — sonucu ayrıca doğrulayın.</p>`;
 
+  const unverified = unverifiedKunyeler || [];
   const paragraphs = trimmed.split(/\n\s*\n/).filter((p) => p.trim());
   textBox.innerHTML = paragraphs.length
     ? paragraphs
-        .map(
-          (p) =>
-            `<div class="border border-slate-100 rounded-lg p-3.5 bg-slate-50/60 whitespace-pre-wrap">${escapeHtml(p.trim())}</div>`
-        )
+        .map((p) => {
+          const metin = p.trim();
+          const supheli = unverified.some((k) => metin.includes(k));
+          const kutuStil = supheli
+            ? "border-rose-300 bg-rose-50/70"
+            : "border-slate-100 bg-slate-50/60";
+          const rozet = supheli
+            ? '<span class="block text-[11px] font-semibold text-rose-600 mb-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Kaynağı doğrulanamadı — resmi kaynaktan teyit edin</span>'
+            : "";
+          return `<div class="border ${kutuStil} rounded-lg p-3.5 whitespace-pre-wrap">${rozet}${escapeHtml(metin)}</div>`;
+        })
         .join("")
     : `<div class="whitespace-pre-wrap">${escapeHtml(trimmed)}</div>`;
 }
@@ -223,6 +231,12 @@ const api = {
     const fd = toFormData(fields);
     if (file) fd.append("dosya", file);
     const res = await authedFetch(`/api/dosyalar/${dosyaId}/vekaletname`, { method: "POST", body: fd });
+    return res.json();
+  },
+  async vekaletnameOku(file) {
+    const fd = new FormData();
+    fd.append("dosya", file);
+    const res = await authedFetch("/api/vekaletname-oku", { method: "POST", body: fd });
     return res.json();
   },
   async listDosyaVekaletname(dosyaId) {

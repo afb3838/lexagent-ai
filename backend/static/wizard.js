@@ -186,7 +186,8 @@ async function startResearch() {
       "research-text",
       data.result,
       data.sources,
-      "Bu konuyla ilgili doğrulanmış bir emsal karar bulunamadı. Aşağıdaki kanun maddeleri ve genel hukuki ilkeler için sonucu inceleyin, ya da farklı anahtar kelimelerle tekrar deneyin."
+      "Bu konuyla ilgili doğrulanmış bir emsal karar bulunamadı. Farklı anahtar kelimelerle tekrar deneyin.",
+      data.unverified_kunyeler
     );
     document.getElementById("research-loading").classList.add("hidden");
     document.getElementById("research-results").classList.remove("hidden");
