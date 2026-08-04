@@ -139,4 +139,54 @@ sadece test verisi). Bununla canlıda gerçek tıklamalarla test edildi:
   düzeyinde düzeltilip genel desenle kapatıldı; her modülde ayrı ayrı canlı
   tekrar test edilmedi — düzeltmenin doğruluğu Ajanda'daki orijinal bug ile
   birebir aynı kod deseni olduğu için yüksek güvenilirlikte kabul edildi.
+- Çift-tıklama düzeltmesi canlıda AYNI test hesabıyla 3 kez üst üste
+  tıklanarak yeniden doğrulandı: `api.listEtkinlikler()` sadece 1 kayıt
+  gösterdi (önceden 3 kopya oluşuyordu). Düzeltme onaylandı.
+- Test hesabı (`afurkan.baser+lextest2@gmail.com`) ve içindeki tüm test
+  verisi (1 dosya, 1 cari kayıt, 3 test etkinliği) Supabase Authentication
+  panelinden "Delete user" ile kalıcı olarak silindi (cascade ile bağlı
+  tüm satırlar temizlendi). Gerçek hesabınıza (`afurkan.baser@gmail.com`)
+  hiçbir noktada dokunulmadı.
+
+## Madde 7 — Genel cila (SÜREKLİ, ayrı madde olarak değil diğer maddelerle birlikte yapıldı)
+Bu turda bulunan/düzeltilen küçük tutarsızlıklar: Gemini hata mesajlarının
+görsel dili (kırmızı→amber), günlük limit mesajının bilgilendirme kutusu
+olarak gösterilmesi, AAÜT kartının tamamen yeniden tasarlanması, mobil
+hamburger menü. Ayrıca kod genelinde TODO/FIXME/placeholder metin taraması
+yapıldı, bulunmadı.
+
+---
+
+## ÖZET (bu turun sonunda)
+
+**7 maddenin tamamı ele alındı, TIKANDI işaretli hiçbir madde yok.**
+
+Bulunup düzeltilen gerçek hatalar (canlıda doğrulanmış):
+1. **F5 sayfa yenilemede tüm uygulama boş kalıyordu** (kritik) — router()
+   içinde eksik bir DOM elementine erişim tüm router'ı durduruyordu.
+2. **"Kaydet" butonuna art arda tıklamak kopya kayıt oluşturuyordu**
+   (Ajanda'da doğrulandı, aynı kod deseni yüzünden Dosya/Cari Hesap/
+   Vekaletname/İcra Takip/Plan talebinde de düzeltildi).
+3. Mobilde sidebar sabit 240px genişlikteydi, responsive değildi.
+4. Statik dosyalar agresif cache'leniyordu, deploy sonrası eski HTML +
+   yeni JS karışımı riski vardı (#1'in kök nedeni, kalıcı olarak düzeltildi).
+
+Ek olarak: AAÜT hesaplayıcı verdiğiniz gerçek resmi tarife rakamlarıyla
+sıfırdan yeniden yazıldı ve 8 senaryoyla test edildi; günlük kullanım
+limiti env var'dan okunacak şekilde config-driven yapıldı ve dilekçe+OCR'ı
+da kapsayacak şekilde genişletildi; Gemini kota/hata mesajları
+profesyonelleştirildi; Vekaletname OCR ve Emsal Araştırma halüsinasyon
+kontrolü zaten uygun bulundu (küçük bir iyileştirme dışında değişmedi).
+
+**Sizin yapmanız gereken (tek liste):**
+1. AI Studio'da "Buy credits" ile kredi yükleyin — faturalandırma açık ama
+   bakiye 0, bu yüzden Gemini özellikleri hâlâ çalışmıyor (ödeme işlemi
+   olduğu için ben yapamam).
+2. Supabase SQL Editor'de sırayla çalıştırın (henüz çalıştırılmadıysa):
+   `009_vekaletname_alanlari.sql`, `010_profiller_plan_talepleri.sql`,
+   `011_gunluk_kullanim_limiti.sql` — hiçbiri çalıştırılmasa da uygulama
+   çökmez (fail-open tasarlandı), ama ilgili özellikler (plan rozeti,
+   günlük limit, bazı vekaletname alanları) tam çalışmaz.
+3. Kredi yükledikten sonra bana haber verin, gerçek bir Gemini çağrısıyla
+   (Emsal Araştırma/Mevzuat) uçtan uca son doğrulamayı yaparım.
 
