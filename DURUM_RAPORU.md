@@ -53,3 +53,27 @@ test-et/düzelt/tekrar-test-et, her anlamlı düzeltmede commit+push.
 - Listede olmayan özel durumlar için hesaplama yapılmıyor, kullanıcı arayüzde
   net şekilde "tarifeyi manuel kontrol edin" uyarısı görüyor.
 
+## Madde 4 — Vekaletname OCR alan çıkarımı (TAMAMLANDI — zaten uygundu, küçük iyileştirme)
+- Kod incelemesi: `VEKALETNAME_EXTRACTION_SYSTEM` istenen tüm alanları zaten
+  çıkarıyordu (vekil adı, müvekkil adı, TC, adres, özel yetkiler, tarih, noter)
+  ve "okuyamadığın alanı null bırak, ASLA uydurma" kuralı zaten vardı.
+  `ozel_yetkiler` örnek listesine "Dava Açma" eklendi (madde 4'te açıkça
+  istenen bir örnekti, eksikti).
+- `extract_vekaletname_fields` Gemini hata/kota durumunda `{}` döndürüp
+  formu boş bırakıyor (crash yok), `vekaletname.js` null alanları formu
+  doldurmadan atlıyor (JS falsy kontrolü) — uydurma değer riski yok.
+- Kod değişikliği küçük olduğu için ayrı commit yerine Madde 5 ile birlikte
+  commitlenecek.
+
+## Madde 5 — Emsal Araştırma halüsinasyon sıkılaştırması (TAMAMLANDI — zaten uygundu)
+- Kod incelemesi: `bul_dogrulanmamis_kunyeler()` gerçekten Gemini'nin ham
+  `groundingSupports` karakter-aralıklarını kullanıp her Esas/Karar künyesinin
+  bu aralıklarda geçip geçmediğini kontrol ediyor (prompt'a değil, API'nin
+  kendi grounding verisine dayanan kod-seviyesi kontrol — tam istenen şey).
+  `/api/research`'te `chunks` boşsa (grounding hiç kaynak dönmediyse) model
+  metni HİÇ gösterilmiyor, sabit "şu anda gerçek kaynaklardan doğrulanmış bir
+  emsal karar bulunamadı" mesajı dönüyor — madde 5'in istediği tam davranış.
+  Doğrulanamayan künyeler ayrı etiketle işaretleniyor (frontend'de kırmızı
+  "kaynağı doğrulanamadı" rozeti, `api.js` → `renderKaynakliSonuc`).
+- Değişiklik gerekmedi, sadece doğrulandı.
+

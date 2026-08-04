@@ -332,7 +332,7 @@ Belgeyi dikkatlice oku ve SADECE su alanlari iceren gecerli bir JSON nesnesi don
   "muvekkil_adi": "vekaleti verenin (muvekkilin) adi soyadi veya null",
   "muvekkil_tc": "muvekkilin TC kimlik numarasi (11 hane) veya null",
   "muvekkil_adres": "muvekkilin adresi veya null",
-  "ozel_yetkiler": "kisa liste, orn: Temyiz, Sulh, Ibra, Ahzu Kabz veya null",
+  "ozel_yetkiler": "belgede gecen ozel yetkilerin kisa listesi, orn: Dava Acma, Temyiz, Sulh, Ibra, Ahzu Kabz veya null",
   "veren_tarih": "YYYY-MM-DD veya null",
   "noter": "duzenleyen noterlik adi veya null",
   "ozet": "1-2 cumlelik kisa aciklama veya null"
