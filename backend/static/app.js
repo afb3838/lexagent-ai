@@ -198,13 +198,13 @@ supabaseClient.auth.onAuthStateChange((_event, session) => {
 // Mobil sidebar (kucuk ekranlarda hamburger menu)
 // ---------------------------------------------------------------------------
 function toggleMobileMenu() {
-  document.getElementById("sidebar").classList.toggle("-translate-x-full");
-  document.getElementById("sidebar-overlay").classList.toggle("hidden");
+  document.getElementById("sidebar")?.classList.toggle("-translate-x-full");
+  document.getElementById("sidebar-overlay")?.classList.toggle("hidden");
 }
 
 function closeMobileMenu() {
-  document.getElementById("sidebar").classList.add("-translate-x-full");
-  document.getElementById("sidebar-overlay").classList.add("hidden");
+  document.getElementById("sidebar")?.classList.add("-translate-x-full");
+  document.getElementById("sidebar-overlay")?.classList.add("hidden");
 }
 
 // ---------------------------------------------------------------------------

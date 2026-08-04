@@ -1113,5 +1113,18 @@ async def health():
     }
 
 
+class NoCacheStaticFiles(StaticFiles):
+    """Tarayicinin index.html/app.js gibi dosyalari agresif cache'leyip farkli
+    deploy'lardan gelen HTML+JS'i karistirmasini onler (bkz. Madde 6 F5 testi:
+    eski HTML + yeni JS karisip router()'in tamamen calismamasina yol acmisti).
+    no-cache = her seferinde sunucuya sor, degismediyse 304 al; ETag sayesinde
+    bant genisligi maliyeti yok, sadece "hangi surumdeyim" garantisi var."""
+
+    async def get_response(self, path: str, scope):
+        response = await super().get_response(path, scope)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
 # Frontend'i (static/) ayni servisten sun -> ayri bir hosting'e / CORS ayarina gerek kalmaz
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
+app.mount("/", NoCacheStaticFiles(directory="static", html=True), name="static")
