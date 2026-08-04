@@ -278,6 +278,9 @@
       <a href="#/mevzuat" data-route="mevzuat" class="nav-link flex items-center px-3 py-2 rounded-lg">
         <i class="fa-solid fa-book w-5"></i><span class="ml-2">Mevzuat</span>
       </a>
+      <a href="#/hesaplama-araclari" data-route="hesaplama-araclari" class="nav-link flex items-center px-3 py-2 rounded-lg">
+        <i class="fa-solid fa-calculator w-5"></i><span class="ml-2">Hesaplama Araçları</span>
+      </a>
     </nav>
     <div class="p-3 border-t border-slate-800 space-y-2">
       <div id="plan-badge" onclick="openPlanModal('profesyonel')" class="hidden text-xs px-2.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-between cursor-pointer">
@@ -708,6 +711,178 @@
         </div>
       </div>
 
+      <!-- PAGE: Hesaplama Araclari -->
+      <div id="page-hesaplama" class="page hidden space-y-6">
+        <div class="grid lg:grid-cols-2 gap-6">
+
+          <!-- Hukuki Sure Hesaplama -->
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+            <h3 class="font-bold"><i class="fa-solid fa-hourglass-half text-indigo-600 mr-1.5"></i>Hukuki Süre Hesaplama</h3>
+            <p class="text-xs text-slate-500">Tebliğ tarihine göre sürenin son gününü hesaplar (HMK m.90-95, m.104 adli tatil uzatması). Dini/resmi bayram günleri otomatik tespit edilmez, ayrıca kontrol edin.</p>
+            <div class="grid sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold mb-1">Tebliğ Tarihi</label>
+                <input id="sure-teblig-tarihi" type="date" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm">
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-xs font-semibold mb-1">Süre</label>
+                  <input id="sure-miktar" type="number" min="1" value="15" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold mb-1">Birim</label>
+                  <select id="sure-birim" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                    <option value="gun" selected>Gün</option>
+                    <option value="hafta">Hafta</option>
+                    <option value="ay">Ay</option>
+                    <option value="yil">Yıl</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <label class="flex items-center gap-2 text-xs text-slate-600">
+              <input id="sure-adli-tatil" type="checkbox" checked> Adli tatile (20 Temmuz - 31 Ağustos) rastlarsa 7 gün uzat (HMK m.104)
+            </label>
+            <button onclick="hesaplaHukukiSure()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-2.5 px-5 rounded-lg">Hesapla</button>
+            <div id="sure-sonuc" class="hidden bg-indigo-50/50 border border-indigo-100 rounded-xl p-4 text-sm"></div>
+          </div>
+
+          <!-- E-Teblig Teblig Tarihi -->
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+            <h3 class="font-bold"><i class="fa-solid fa-envelope-circle-check text-indigo-600 mr-1.5"></i>E-Tebligat Tebliğ Tarihi</h3>
+            <p class="text-xs text-slate-500">7201 sayılı Tebligat Kanunu Ek m.7 uyarınca elektronik tebligat, muhatabın adresine ulaştığı tarihi izleyen 5. günün sonunda yapılmış sayılır.</p>
+            <div>
+              <label class="block text-xs font-semibold mb-1">Elektronik Adrese Teslim Tarihi</label>
+              <input id="etebligat-teslim-tarihi" type="date" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm">
+            </div>
+            <button onclick="hesaplaETebligat()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-2.5 px-5 rounded-lg">Hesapla</button>
+            <div id="etebligat-sonuc" class="hidden bg-indigo-50/50 border border-indigo-100 rounded-xl p-4 text-sm"></div>
+          </div>
+
+          <!-- Yasal Faiz Hesaplama -->
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+            <h3 class="font-bold"><i class="fa-solid fa-percent text-indigo-600 mr-1.5"></i>Yasal Faiz Hesaplama</h3>
+            <p class="text-xs text-slate-500">Faiz oranları yıllara ve türe (adi kanuni faiz / temerrüt / avans faizi) göre değişir; sistem bir oran uydurmaz — güncel oranı aşağıdaki butonla canlı kaynaktan arayıp kendiniz girin.</p>
+            <div class="grid sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold mb-1">Anapara (TL)</label>
+                <input id="faiz-anapara" type="number" min="0" step="0.01" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold mb-1">Yıllık Faiz Oranı (%)</label>
+                <input id="faiz-oran" type="number" min="0" step="0.01" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold mb-1">Başlangıç Tarihi</label>
+                <input id="faiz-baslangic" type="date" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold mb-1">Bitiş Tarihi</label>
+                <input id="faiz-bitis" type="date" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm">
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <button onclick="hesaplaYasalFaiz()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-2.5 px-5 rounded-lg">Hesapla</button>
+              <button onclick="guncelOranAra('yasal faiz oranı temerrüt faizi avans faizi güncel oran', 'faiz-oran-sources', 'faiz-oran-text')" class="border border-slate-300 hover:border-indigo-400 text-slate-700 text-sm font-medium py-2.5 px-5 rounded-lg">
+                <i class="fa-solid fa-magnifying-glass mr-1"></i>Güncel Oranı Bul
+              </button>
+            </div>
+            <div id="faiz-sonuc" class="hidden bg-indigo-50/50 border border-indigo-100 rounded-xl p-4 text-sm"></div>
+            <div id="faiz-oran-sources" class="flex flex-wrap gap-2"></div>
+            <div id="faiz-oran-text" class="space-y-2 text-sm leading-relaxed"></div>
+          </div>
+
+          <!-- Icra Masrafi Hesaplama -->
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+            <h3 class="font-bold"><i class="fa-solid fa-gavel text-indigo-600 mr-1.5"></i>İcra Masrafı Hesaplama</h3>
+            <p class="text-xs text-slate-500">Harç kalemlerinin yapısı sabittir; oranlar (binde/yüzde) her yıl değişebildiğinden sistem bunları uydurmaz — güncel oranı arayıp aşağıdaki alanlara siz girin.</p>
+            <div class="grid sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold mb-1">Alacak Tutarı (TL)</label>
+                <input id="icra-tutar" type="number" min="0" step="0.01" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold mb-1">Dosya Türü</label>
+                <select id="icra-tur" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                  <option value="ilamsiz" selected>İlamsız Takip</option>
+                  <option value="ilamli">İlamlı Takip</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold mb-1">Başvurma Harcı (TL, maktu)</label>
+                <input id="icra-basvurma" type="number" min="0" step="0.01" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm" placeholder="Güncel tutarı girin">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold mb-1">Peşin Harç Oranı (‰)</label>
+                <input id="icra-pesin-oran" type="number" min="0" step="0.01" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm" placeholder="Sadece ilamsızda">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold mb-1">Tahsil Harcı Oranı (%)</label>
+                <input id="icra-tahsil-oran" type="number" min="0" step="0.01" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm" placeholder="Ödeme aşamasına göre değişir">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold mb-1">Vekalet (İcra Takip) Ücreti (TL)</label>
+                <input id="icra-vekalet" type="number" min="0" step="0.01" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm" placeholder="AAÜT'ye göre">
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <button onclick="hesaplaIcraMasrafi()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-2.5 px-5 rounded-lg">Hesapla</button>
+              <button onclick="guncelOranAra('icra takip harçları başvurma harcı peşin harç tahsil harcı oranları güncel yıl', 'icra-oran-sources', 'icra-oran-text')" class="border border-slate-300 hover:border-indigo-400 text-slate-700 text-sm font-medium py-2.5 px-5 rounded-lg">
+                <i class="fa-solid fa-magnifying-glass mr-1"></i>Güncel Oranları Bul
+              </button>
+            </div>
+            <div id="icra-sonuc" class="hidden bg-indigo-50/50 border border-indigo-100 rounded-xl p-4 text-sm"></div>
+            <div id="icra-oran-sources" class="flex flex-wrap gap-2"></div>
+            <div id="icra-oran-text" class="space-y-2 text-sm leading-relaxed"></div>
+          </div>
+
+          <!-- Arabuluculuk Ucreti Hesaplama -->
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4 lg:col-span-2">
+            <h3 class="font-bold"><i class="fa-solid fa-handshake text-indigo-600 mr-1.5"></i>Arabuluculuk Ücreti Hesaplama</h3>
+            <p class="text-xs text-slate-500">Arabuluculuk Asgari Ücret Tarifesi her yıl güncellenir; sistem tutarı uydurmaz — güncel tarifeyi arayıp saatlik ücret / nispi oranı siz girin.</p>
+            <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div>
+                <label class="block text-xs font-semibold mb-1">Uyuşmazlık Konusu</label>
+                <select id="arab-tur" onchange="toggleArabAlanlari()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                  <option value="para-olmayan" selected>Parayla ölçülemeyen</option>
+                  <option value="para-olan">Parayla ölçülebilen</option>
+                </select>
+              </div>
+              <div id="arab-saat-alani">
+                <label class="block text-xs font-semibold mb-1">Çalışma Süresi (saat, en az 2)</label>
+                <input id="arab-saat" type="number" min="2" value="2" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm">
+              </div>
+              <div id="arab-taraf-alani">
+                <label class="block text-xs font-semibold mb-1">Taraf Sayısı</label>
+                <input id="arab-taraf" type="number" min="2" value="2" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm">
+              </div>
+              <div id="arab-saatlik-ucret-alani">
+                <label class="block text-xs font-semibold mb-1">Saatlik Ücret (TL)</label>
+                <input id="arab-saatlik-ucret" type="number" min="0" step="0.01" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm" placeholder="Güncel tarifeden girin">
+              </div>
+              <div id="arab-tutar-alani" class="hidden">
+                <label class="block text-xs font-semibold mb-1">Uyuşmazlık Tutarı (TL)</label>
+                <input id="arab-tutar" type="number" min="0" step="0.01" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm">
+              </div>
+              <div id="arab-nispi-oran-alani" class="hidden">
+                <label class="block text-xs font-semibold mb-1">Nispi Oran (%)</label>
+                <input id="arab-nispi-oran" type="number" min="0" step="0.01" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm" placeholder="Güncel tarifeden girin">
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <button onclick="hesaplaArabuluculuk()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-2.5 px-5 rounded-lg">Hesapla</button>
+              <button onclick="guncelOranAra('arabuluculuk asgari ücret tarifesi güncel yıl saatlik ücret', 'arab-oran-sources', 'arab-oran-text')" class="border border-slate-300 hover:border-indigo-400 text-slate-700 text-sm font-medium py-2.5 px-5 rounded-lg">
+                <i class="fa-solid fa-magnifying-glass mr-1"></i>Güncel Tarifeyi Bul
+              </button>
+            </div>
+            <div id="arab-sonuc" class="hidden bg-indigo-50/50 border border-indigo-100 rounded-xl p-4 text-sm"></div>
+            <div id="arab-oran-sources" class="flex flex-wrap gap-2"></div>
+            <div id="arab-oran-text" class="space-y-2 text-sm leading-relaxed"></div>
+          </div>
+
+        </div>
+      </div>
+
     </main>
   </div>
 </div>
@@ -917,6 +1092,7 @@
 <script src="cari.js"></script>
 <script src="icra.js"></script>
 <script src="mevzuat.js"></script>
+<script src="hesaplama.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

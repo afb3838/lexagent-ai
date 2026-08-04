@@ -23,6 +23,7 @@ const PAGE_TITLES = {
   "cari-hesap": "Cari Hesap",
   "icra-takip": "İcra Takip",
   mevzuat: "Mevzuat",
+  "hesaplama-araclari": "Hesaplama Araçları",
 };
 
 const PLAN_LABELS_JS = {
@@ -252,6 +253,11 @@ async function router() {
   } else if (route === "mevzuat") {
     showPage("page-mevzuat");
     await loadMevzuatPage();
+  } else if (route === "hesaplama-araclari") {
+    showPage("page-hesaplama");
+    ["sure-sonuc", "etebligat-sonuc", "faiz-sonuc", "icra-sonuc", "arab-sonuc"].forEach((id) =>
+      document.getElementById(id).classList.add("hidden")
+    );
   } else {
     location.hash = "#/dosyalar";
   }
