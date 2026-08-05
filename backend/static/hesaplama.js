@@ -172,38 +172,28 @@ function hesaplaYasalFaiz() {
 }
 
 // ---------------------------------------------------------------------------
-// Icra Masrafi Hesaplama (492 sayili Harclar Kanunu (1) sayili tarife, B bolumu)
-// Oranlar (binde 5 pesin harc; %4,55 / %9,10 / %11,38 / %2,27 kademeli tahsil
-// harci) kanunda sabit yuzdeler olarak belirlenmis olup yillara gore degismez;
-// yalniz basvurma harci gibi maktu TL tutarlari her yil yeniden degerleme
-// oranina gore guncellenir (burada 2026 tutari onceden dolduruldu, kullanici
-// isterse degistirebilir / "Guncel Oranlari Bul" ile teyit edebilir).
-// ---------------------------------------------------------------------------
-function toggleIcraAlanlari() {
-  const ilamsiz = document.getElementById("icra-tur").value === "ilamsiz";
-  document.getElementById("icra-pesin-alani").classList.toggle("hidden", !ilamsiz);
-}
+// Icra Masrafi Hesaplama: dosya acilisinda pesin odenmesi gereken masraflar
+// (2026 tarifesi). Tahsil asamasindaki nispi tahsil harci (odeme asamasina
+// gore %4,55/%9,10/%11,38/%2,27) bu hesaba dahil degildir - o, alacagin
+// fiilen tahsil edildigi anda ayrica hesaplanir, dosya acma masrafi degildir.
+const ICRA_BASVURMA_HARCI = 732;
+const ICRA_PESIN_HARC_ORANI = 0.5; // binde 5, sadece ilamsiz takipte
+const ICRA_VEKALET_SURET_HARCI = 104;
+const ICRA_VEKALET_PULU = 164;
+const ICRA_TEBLIGAT_GIDERI_BORCLU_BASI = { normal: 265, hizli: 530, mts: 310, etebligat: 20 };
 
-function icraTahsilAsamaDegisti() {
-  const secim = document.getElementById("icra-tahsil-asama").value;
-  const ozelInput = document.getElementById("icra-tahsil-oran");
-  if (secim === "custom") {
-    ozelInput.classList.remove("hidden");
-    ozelInput.value = "";
-    ozelInput.focus();
-  } else {
-    ozelInput.classList.add("hidden");
-    ozelInput.value = secim;
-  }
+function initIcraBorcluSayisiSelect() {
+  const select = document.getElementById("icra-borclu-sayisi");
+  if (select.options.length) return;
+  select.innerHTML = Array.from({ length: 20 }, (_, i) => i + 1).map((n) => `<option value="${n}">${n}</option>`).join("");
 }
 
 function hesaplaIcraMasrafi() {
   const tutar = parseFloat(document.getElementById("icra-tutar").value);
-  const tur = document.getElementById("icra-tur").value;
-  const basvurma = parseFloat(document.getElementById("icra-basvurma").value) || 0;
-  const pesinOran = parseFloat(document.getElementById("icra-pesin-oran").value) || 0;
-  const tahsilOran = parseFloat(document.getElementById("icra-tahsil-oran").value) || 0;
-  const vekalet = parseFloat(document.getElementById("icra-vekalet").value) || 0;
+  const ilamsiz = document.getElementById("icra-tur").value === "ilamsiz";
+  const borcluSayisi = parseInt(document.getElementById("icra-borclu-sayisi").value, 10) || 1;
+  const tebligatTuru = document.getElementById("icra-tebligat-turu").value;
+  const bizzat = document.getElementById("icra-bizzat").checked;
   const box = document.getElementById("icra-sonuc");
 
   if (!tutar || tutar <= 0) {
@@ -211,28 +201,28 @@ function hesaplaIcraMasrafi() {
     return;
   }
 
-  const kalemler = [{ ad: "Başvurma harcı (maktu)", tutar: basvurma }];
-  let pesinHarc = 0;
-  if (tur === "ilamsiz") {
-    pesinHarc = tutar * (pesinOran / 1000);
-    kalemler.push({ ad: `Peşin harç (‰${pesinOran || 0})`, tutar: pesinHarc });
+  const kalemler = [];
+  if (ilamsiz) {
+    kalemler.push({ ad: "Peşin Harç (‰5)", tutar: tutar * (ICRA_PESIN_HARC_ORANI / 100) });
   }
-  const tahsilHarciTam = tutar * (tahsilOran / 100);
-  const tahsilHarci = tur === "ilamsiz" ? Math.max(0, tahsilHarciTam - pesinHarc) : tahsilHarciTam;
+  kalemler.push({ ad: "Başvuru Harcı", tutar: ICRA_BASVURMA_HARCI });
+  if (!bizzat) {
+    kalemler.push({ ad: "Vekâlet Suret Harcı", tutar: ICRA_VEKALET_SURET_HARCI });
+    kalemler.push({ ad: "Vekâlet Pulu", tutar: ICRA_VEKALET_PULU });
+  }
   kalemler.push({
-    ad: `Tahsil harcı (%${tahsilOran || 0}${tur === "ilamsiz" ? ", peşin harç mahsup edilmiş" : ""})`,
-    tutar: tahsilHarci,
+    ad: `Tebligat Gideri (${borcluSayisi} borçlu)`,
+    tutar: ICRA_TEBLIGAT_GIDERI_BORCLU_BASI[tebligatTuru] * borcluSayisi,
   });
-  kalemler.push({ ad: "Vekalet (icra takip) ücreti", tutar: vekalet });
 
   const toplam = kalemler.reduce((s, k) => s + k.tutar, 0);
 
   box.innerHTML = `
-    <p class="font-bold text-indigo-900 mb-2">Tahmini toplam masraf: ${formatTL(toplam)}</p>
+    <p class="font-bold text-indigo-900 mb-2">Toplam İcra Takibi Masrafı: ${formatTL(toplam)}</p>
     <ul class="text-xs text-slate-600 list-disc list-inside space-y-0.5 mb-2">
       ${kalemler.map((k) => `<li>${escapeHtml(k.ad)}: <strong>${formatTL(k.tutar)}</strong></li>`).join("")}
     </ul>
-    <p class="text-xs text-slate-400 border-t border-slate-100 pt-2">Tahsil harcı oranları (492 s. Harçlar K. (1) sayılı tarife B bölümü) ödeme aşamasına göre kademelidir; ilamsız takipte başlangıçta ödenen peşin harç, tahsil harcından mahsup edilmiştir (İİK m.29). Başvurma harcı gibi maktu tutarlar yıl başında değişebilir — yeni yılda "Güncel Oranları Bul" ile teyit edin.</p>
+    <p class="text-xs text-slate-400 border-t border-slate-100 pt-2">Bu tutar, dosya açılışında peşin ödenmesi gereken masraflardır. Alacağın fiilen tahsil edildiği aşamada (haciz öncesi/sonrası/satış sonrası) ayrıca kademeli tahsil harcı doğar; o an bilinmediğinden bu hesaba dahil edilmemiştir.</p>
   `;
   box.classList.remove("hidden");
 }

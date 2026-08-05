@@ -976,7 +976,7 @@
           <!-- Icra Masrafi Hesaplama -->
           <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
             <h3 class="font-bold"><i class="fa-solid fa-gavel text-indigo-600 mr-1.5"></i>İcra Masrafı Hesaplama</h3>
-            <p class="text-xs text-slate-500">Harç oranları 2026 yılı (1) sayılı tarife esas alınarak otomatik doldurulmuştur. Başvurma harcı gibi maktu tutarlar her yıl yeniden değerleme oranıyla değiştiğinden, yeni yıla girildiğinde "Güncel Oranları Bul" ile teyit edin; oran alanlarını da isterseniz elle değiştirebilirsiniz.</p>
+            <p class="text-xs text-slate-500">İcra dosyası açılışında peşin ödenmesi gereken masrafları hesaplar (2026 tarifesi). Tahsil aşamasındaki nispi tahsil harcı bu hesaba dahil değildir; o, alacağın fiilen tahsil edildiği anda ayrıca hesaplanır.</p>
             <div class="grid sm:grid-cols-2 gap-3">
               <div>
                 <label class="block text-xs font-semibold mb-1">Alacak Tutarı (TL)</label>
@@ -984,44 +984,33 @@
               </div>
               <div>
                 <label class="block text-xs font-semibold mb-1">Dosya Türü</label>
-                <select id="icra-tur" onchange="toggleIcraAlanlari()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                <select id="icra-tur" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm">
                   <option value="ilamsiz" selected>İlamsız Takip</option>
                   <option value="ilamli">İlamlı Takip</option>
                 </select>
               </div>
               <div>
-                <label class="block text-xs font-semibold mb-1">Başvurma Harcı (TL, maktu)</label>
-                <input id="icra-basvurma" type="number" min="0" step="0.01" value="732" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm">
-              </div>
-              <div id="icra-pesin-alani">
-                <label class="block text-xs font-semibold mb-1">Peşin Harç Oranı (‰)</label>
-                <input id="icra-pesin-oran" type="number" min="0" step="0.01" value="5" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                <label class="block text-xs font-semibold mb-1">Borçlu Sayısı</label>
+                <select id="icra-borclu-sayisi" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm"></select>
               </div>
               <div>
-                <label class="block text-xs font-semibold mb-1">Tahsil Harcı — Ödeme Aşaması</label>
-                <select id="icra-tahsil-asama" onchange="icraTahsilAsamaDegisti()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm">
-                  <option value="4.55" selected>Ödeme emri tebliği sonrası, haciz öncesi (%4,55)</option>
-                  <option value="9.10">Haciz sonrası, satıştan önce (%9,10)</option>
-                  <option value="11.38">Haczedilen/rehinli malın satışıyla (%11,38)</option>
-                  <option value="2.27">İİK 125/3 — takipsiz alacaklıya ödeme (%2,27)</option>
-                  <option value="custom">Elle gir…</option>
+                <label class="block text-xs font-semibold mb-1">Tebligat Türü</label>
+                <select id="icra-tebligat-turu" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                  <option value="normal" selected>Normal Tebligat</option>
+                  <option value="hizli">Hızlı Tebligat</option>
+                  <option value="mts">Merkezi Takip Sistemi (MTS) Tebligat</option>
+                  <option value="etebligat">Elektronik Tebligat (E-Tebligat)</option>
                 </select>
-                <input id="icra-tahsil-oran" type="number" min="0" step="0.01" value="4.55" class="hidden mt-2 w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm" placeholder="Tahsil harcı oranı (%)">
-              </div>
-              <div>
-                <label class="block text-xs font-semibold mb-1">Vekalet (İcra Takip) Ücreti (TL)</label>
-                <input id="icra-vekalet" type="number" min="0" step="0.01" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm" placeholder="Anlaşılan ücret veya AAÜT hesaplayıcısından">
               </div>
             </div>
+            <label class="flex items-center gap-2 text-xs text-slate-600">
+              <input id="icra-bizzat" type="checkbox" class="rounded border-slate-300">
+              Takibi avukat olmadan alacaklı bizzat kendisi başlatıyor (vekâlet suret harcı ve baro pulu gerekmez)
+            </label>
             <div class="flex gap-2">
               <button onclick="hesaplaIcraMasrafi()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-2.5 px-5 rounded-lg">Hesapla</button>
-              <button onclick="guncelOranAra('icra takip harçları başvurma harcı peşin harç tahsil harcı oranları güncel yıl', 'icra-oran-sources', 'icra-oran-text')" class="border border-slate-300 hover:border-indigo-400 text-slate-700 text-sm font-medium py-2.5 px-5 rounded-lg">
-                <i class="fa-solid fa-magnifying-glass mr-1"></i>Güncel Oranları Bul
-              </button>
             </div>
             <div id="icra-sonuc" class="hidden bg-indigo-50/50 border border-indigo-100 rounded-xl p-4 text-sm"></div>
-            <div id="icra-oran-sources" class="flex flex-wrap gap-2"></div>
-            <div id="icra-oran-text" class="space-y-2 text-sm leading-relaxed"></div>
           </div>
 
           <!-- Arabuluculuk Ucreti Hesaplama -->

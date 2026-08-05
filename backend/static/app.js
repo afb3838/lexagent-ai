@@ -292,7 +292,7 @@ async function router() {
     ["sure-sonuc", "etebligat-sonuc", "faiz-sonuc", "icra-sonuc", "arab-sonuc"].forEach((id) =>
       document.getElementById(id).classList.add("hidden")
     );
-    toggleIcraAlanlari();
+    initIcraBorcluSayisiSelect();
   } else if (route === "sablonlar" && param) {
     showPage("page-sablon-detay");
     openSablonPage(param);
