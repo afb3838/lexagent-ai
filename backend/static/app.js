@@ -615,17 +615,6 @@ async function handleBelgeUpload(e) {
 // ---------------------------------------------------------------------------
 // Boot
 // ---------------------------------------------------------------------------
-// Barolar Rehberi: il listesini filtrele
-// ---------------------------------------------------------------------------
-function filtreleBaroListesi() {
-  const q = document.getElementById("baro-filtre").value.trim().toLocaleLowerCase("tr");
-  document.querySelectorAll("#baro-grid a").forEach((el) => {
-    const ad = el.textContent.trim().toLocaleLowerCase("tr");
-    el.classList.toggle("hidden", q.length > 0 && !ad.includes(q));
-  });
-}
-
-// ---------------------------------------------------------------------------
 fetch("/api/health")
   .then((r) => r.json())
   .then((d) => {
