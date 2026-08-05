@@ -17,6 +17,7 @@ const BELGE_TUR_LABELS = {
 
 const PAGE_TITLES = {
   dosyalar: "Dosyalarım",
+  musteriler: "Müvekkiller",
   "emsal-arastirma": "Emsal Araştırma",
   ajanda: "Ajanda",
   vekaletnameler: "Vekaletnameler",
@@ -250,6 +251,13 @@ async function router() {
   } else if (route === "dosyalar") {
     showPage("page-dosyalar");
     await loadDosyaList();
+  } else if (route === "musteriler" && param) {
+    showPage("page-musteri-detay");
+    await openMusteriPage(param);
+  } else if (route === "musteriler") {
+    showPage("page-musteriler");
+    document.getElementById("new-musteri-form").classList.add("hidden");
+    await loadMusterilerPage();
   } else if (route === "emsal-arastirma") {
     showPage("page-emsal-arastirma");
     mountWizard("wizard-mount-standalone", null);
@@ -297,9 +305,51 @@ async function loadDosyaList() {
   try {
     const dosyalar = await api.listDosyalar();
     renderDosyaList(dosyalar);
+    renderOzetPanel(dosyalar);
   } catch (err) {
     showToast("Dosyalar yüklenemedi: " + err.message);
   }
+}
+
+async function renderOzetPanel(dosyalar) {
+  const acikDurumlar = new Set(["acildi", "bilirkisi_bekleniyor", "durusma_bekleniyor"]);
+  const acikSayisi = dosyalar.filter((d) => acikDurumlar.has(d.durum)).length;
+
+  let yaklasanDurusma = 0;
+  let bekleyenBakiye = 0;
+  try {
+    const [etkinlikler, kayitlar] = await Promise.all([api.listEtkinlikler(), api.listCariHesap()]);
+    const bugun = todayStr();
+    const yediGunSonra = new Date();
+    yediGunSonra.setDate(yediGunSonra.getDate() + 7);
+    const yediGunSonraStr = toDateStr(yediGunSonra);
+    yaklasanDurusma = etkinlikler.filter(
+      (e) => e.tur === "durusma" && e.tarih >= bugun && e.tarih <= yediGunSonraStr
+    ).length;
+    const { bakiye } = hesaplaBakiye(kayitlar);
+    bekleyenBakiye = bakiye;
+  } catch (err) {
+    // ozet panel ikincil bilgidir, hata durumunda sessizce eksik gosterilir
+  }
+
+  const kartlar = [
+    { ikon: "fa-folder-open", etiket: "Açık Dosya", deger: String(acikSayisi), renk: "text-indigo-600 bg-indigo-50" },
+    { ikon: "fa-gavel", etiket: "7 Gün İçinde Duruşma", deger: String(yaklasanDurusma), renk: "text-amber-600 bg-amber-50" },
+    { ikon: "fa-coins", etiket: "Bekleyen Tahsilat", deger: formatTL(bekleyenBakiye), renk: "text-rose-600 bg-rose-50" },
+    { ikon: "fa-address-book", etiket: "Toplam Dosya", deger: String(dosyalar.length), renk: "text-slate-600 bg-slate-100" },
+  ];
+  document.getElementById("ozet-panel").innerHTML = kartlar
+    .map(
+      (k) => `
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-lg ${k.renk} flex items-center justify-center shrink-0"><i class="fa-solid ${k.ikon}"></i></div>
+      <div>
+        <p class="text-lg font-bold leading-tight">${k.deger}</p>
+        <p class="text-xs text-slate-500">${k.etiket}</p>
+      </div>
+    </div>`
+    )
+    .join("");
 }
 
 function renderDosyaList(dosyalar) {
@@ -324,6 +374,7 @@ function renderDosyaList(dosyalar) {
 
 function openNewDosyaForm() {
   document.getElementById("new-dosya-form").classList.remove("hidden");
+  populateMusteriSelect();
 }
 
 function closeNewDosyaForm() {
@@ -331,6 +382,7 @@ function closeNewDosyaForm() {
   ["new-muvekkil", "new-karsi-taraf", "new-mahkeme", "new-esas-no", "new-dava-turu", "new-acilis-tarihi"].forEach(
     (id) => (document.getElementById(id).value = "")
   );
+  document.getElementById("new-dosya-musteri").value = "";
 }
 
 async function celiskiKontrolu(muvekkil_adi, karsi_taraf) {
@@ -368,6 +420,7 @@ async function submitNewDosya() {
     const dosya = await api.createDosya({
       muvekkil_adi,
       karsi_taraf,
+      musteri_id: document.getElementById("new-dosya-musteri").value,
       mahkeme: document.getElementById("new-mahkeme").value.trim(),
       esas_no: document.getElementById("new-esas-no").value.trim(),
       dava_turu: document.getElementById("new-dava-turu").value.trim(),
@@ -390,6 +443,8 @@ async function openDosyaPage(id) {
     document.getElementById("belge-upload-progress").innerHTML = "";
     document.getElementById("vekaletname-form").classList.add("hidden");
     document.getElementById("cari-hesap-form").classList.add("hidden");
+    document.getElementById("zaman-form").classList.add("hidden");
+    document.getElementById("fatura-form").classList.add("hidden");
     document.getElementById("paylasim-link-box").classList.add("hidden");
     document.getElementById("belge-analiz-sonuc").classList.add("hidden");
   }
@@ -432,6 +487,8 @@ function renderDosya(dosya) {
   loadDosyaEtkinlikleri(dosya.id);
   loadDosyaVekaletname(dosya.id);
   loadDosyaCariHesap(dosya.id);
+  loadDosyaZaman(dosya.id);
+  loadDosyaFaturalar(dosya.id);
 }
 
 async function updateDurum() {

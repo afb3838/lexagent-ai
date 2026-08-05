@@ -341,6 +341,42 @@ const api = {
     const res = await authedFetch("/api/plan-talebi", { method: "POST", body: toFormData(fields) });
     return res.json();
   },
+  async listMusteriler() {
+    const res = await authedFetch("/api/musteriler");
+    return (await res.json()).musteriler;
+  },
+  async createMusteri(fields) {
+    const res = await authedFetch("/api/musteriler", { method: "POST", body: toFormData(fields) });
+    return res.json();
+  },
+  async getMusteri(id) {
+    const res = await authedFetch(`/api/musteriler/${id}`);
+    return res.json();
+  },
+  async patchMusteri(id, fields) {
+    const res = await authedFetch(`/api/musteriler/${id}`, { method: "PATCH", body: toFormData(fields) });
+    return res.json();
+  },
+  async createZamanKaydi(dosyaId, fields) {
+    const res = await authedFetch(`/api/dosyalar/${dosyaId}/zaman`, { method: "POST", body: toFormData(fields) });
+    return res.json();
+  },
+  async listZamanKayitlari(dosyaId) {
+    const res = await authedFetch(`/api/dosyalar/${dosyaId}/zaman`);
+    return (await res.json()).kayitlar;
+  },
+  async createFatura(dosyaId, fields) {
+    const res = await authedFetch(`/api/dosyalar/${dosyaId}/fatura`, { method: "POST", body: toFormData(fields) });
+    return res.json();
+  },
+  async listFaturalar(dosyaId) {
+    const res = await authedFetch(`/api/dosyalar/${dosyaId}/faturalar`);
+    return (await res.json()).faturalar;
+  },
+  async faturaPdfIndir(faturaId, faturaNo) {
+    const res = await authedFetch(`/api/faturalar/${faturaId}/pdf`);
+    await downloadBlobResponse(res, `fatura-${faturaNo}.pdf`);
+  },
 };
 
 // Kaynaksiz, sade metin sonuclarini (belge risk analizi gibi) paragraf

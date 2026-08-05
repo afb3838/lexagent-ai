@@ -261,6 +261,9 @@
       <a href="#/dosyalar" data-route="dosyalar" class="nav-link flex items-center px-3 py-2 rounded-lg">
         <i class="fa-solid fa-folder-open w-5"></i><span class="ml-2">Dosyalar</span>
       </a>
+      <a href="#/musteriler" data-route="musteriler" class="nav-link flex items-center px-3 py-2 rounded-lg">
+        <i class="fa-solid fa-address-book w-5"></i><span class="ml-2">Müvekkiller</span>
+      </a>
       <a href="#/emsal-arastirma" data-route="emsal-arastirma" class="nav-link flex items-center px-3 py-2 rounded-lg">
         <i class="fa-solid fa-magnifying-glass w-5"></i><span class="ml-2">Emsal Araştırma</span>
       </a>
@@ -307,6 +310,8 @@
 
       <!-- PAGE: Dosyalar (dashboard) -->
       <div id="page-dosyalar" class="page hidden space-y-6">
+        <div id="ozet-panel" class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+
         <div class="flex items-center justify-end">
           <button onclick="openNewDosyaForm()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-5 rounded-lg">
             <i class="fa-solid fa-plus mr-1"></i> Yeni Dosya
@@ -319,6 +324,12 @@
             <div>
               <label class="block text-sm font-semibold mb-1">Müvekkil Adı *</label>
               <input id="new-muvekkil" type="text" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold mb-1">Kayıtlı Müşteri (isteğe bağlı)</label>
+              <select id="new-dosya-musteri" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+                <option value="">Kayıtlı değil / serbest metin</option>
+              </select>
             </div>
             <div>
               <label class="block text-sm font-semibold mb-1">Karşı Taraf</label>
@@ -348,6 +359,65 @@
         </div>
 
         <div id="dosya-list" class="space-y-2"></div>
+      </div>
+
+      <!-- PAGE: Muvekkiller (liste) -->
+      <div id="page-musteriler" class="page hidden space-y-6">
+        <div class="flex items-center justify-end">
+          <button onclick="openNewMusteriForm()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-5 rounded-lg">
+            <i class="fa-solid fa-plus mr-1"></i> Yeni Müvekkil
+          </button>
+        </div>
+        <div id="new-musteri-form" class="hidden bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+          <h3 class="font-bold">Yeni Müvekkil</h3>
+          <div class="grid md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold mb-1">Ad Soyad / Unvan *</label>
+              <input id="new-musteri-ad" type="text" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold mb-1">TC / Vergi No</label>
+              <input id="new-musteri-tc" type="text" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold mb-1">Telefon</label>
+              <input id="new-musteri-telefon" type="text" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold mb-1">E-posta</label>
+              <input id="new-musteri-eposta" type="email" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+            </div>
+            <div class="md:col-span-2">
+              <label class="block text-sm font-semibold mb-1">Adres</label>
+              <input id="new-musteri-adres" type="text" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+            </div>
+            <div class="md:col-span-2">
+              <label class="block text-sm font-semibold mb-1">Notlar</label>
+              <textarea id="new-musteri-notlar" rows="2" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-3 text-sm"></textarea>
+            </div>
+          </div>
+          <div class="flex justify-end space-x-2">
+            <button onclick="closeNewMusteriForm()" class="text-sm px-4 py-2.5 rounded-lg border border-slate-300">Vazgeç</button>
+            <button onclick="submitNewMusteri()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-2.5 px-5 rounded-lg">Oluştur</button>
+          </div>
+        </div>
+        <div id="musteri-list" class="space-y-2"></div>
+      </div>
+
+      <!-- PAGE: Musteri Detayi -->
+      <div id="page-musteri-detay" class="page hidden space-y-6">
+        <a href="#/musteriler" class="text-sm text-slate-500 hover:text-indigo-600">
+          <i class="fa-solid fa-arrow-left mr-1"></i> Müvekkillerime dön
+        </a>
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-3">
+          <h2 id="musteri-title" class="text-xl font-bold"></h2>
+          <div id="musteri-detay" class="flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-500"></div>
+          <div id="musteri-notlar-box"></div>
+        </div>
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-3">
+          <h3 class="font-bold">Bağlı Dosyalar</h3>
+          <div id="musteri-dosyalar" class="space-y-2"></div>
+        </div>
       </div>
 
       <!-- PAGE: Dosya Detayi -->
@@ -509,6 +579,71 @@
           </div>
           <div id="cari-hesap-bakiye" class="text-sm font-semibold"></div>
           <div id="cari-hesap-list" class="space-y-2"></div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold">Zaman Takibi</h3>
+            <button onclick="toggleZamanForm()" class="bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold px-4 py-2 rounded-lg">
+              <i class="fa-solid fa-plus mr-1"></i>Süre Ekle
+            </button>
+          </div>
+          <div id="zaman-form" class="hidden space-y-3 border-b border-slate-100 pb-4">
+            <div class="grid md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-semibold mb-1">Tarih</label>
+                <input id="zaman-tarih" type="date" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-sm font-semibold mb-1">Saat</label>
+                  <input id="zaman-saat" type="number" min="0" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+                </div>
+                <div>
+                  <label class="block text-sm font-semibold mb-1">Dakika</label>
+                  <input id="zaman-dakika" type="number" min="0" max="59" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-semibold mb-1">Saatlik Ücret (TL, isteğe bağlı)</label>
+                <input id="zaman-ucret" type="number" min="0" step="0.01" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+              </div>
+              <div>
+                <label class="block text-sm font-semibold mb-1">Açıklama</label>
+                <input id="zaman-aciklama" type="text" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+              </div>
+            </div>
+            <div class="flex justify-end">
+              <button onclick="submitZamanKaydi()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-2.5 px-5 rounded-lg">Kaydet</button>
+            </div>
+          </div>
+          <div id="zaman-toplam" class="text-sm font-semibold text-slate-600"></div>
+          <div id="zaman-list" class="space-y-2"></div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold">Faturalandırma</h3>
+            <button onclick="toggleFaturaForm()" class="bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold px-4 py-2 rounded-lg">
+              <i class="fa-solid fa-plus mr-1"></i>Fatura Oluştur
+            </button>
+          </div>
+          <div id="fatura-form" class="hidden space-y-3 border-b border-slate-100 pb-4">
+            <div class="grid md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-semibold mb-1">Tutar (TL)</label>
+                <input id="fatura-tutar" type="number" min="0" step="0.01" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+              </div>
+              <div>
+                <label class="block text-sm font-semibold mb-1">Açıklama</label>
+                <input id="fatura-aciklama" type="text" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm">
+              </div>
+            </div>
+            <div class="flex justify-end">
+              <button onclick="submitFatura()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-2.5 px-5 rounded-lg">Oluştur</button>
+            </div>
+          </div>
+          <div id="fatura-list" class="space-y-2"></div>
         </div>
 
         <div id="wizard-mount-dosya"></div>
@@ -1117,6 +1252,7 @@
 <script src="ajanda.js"></script>
 <script src="vekaletname.js"></script>
 <script src="cari.js"></script>
+<script src="musteri.js"></script>
 <script src="icra.js"></script>
 <script src="mevzuat.js"></script>
 <script src="hesaplama.js"></script>

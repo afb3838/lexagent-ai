@@ -467,6 +467,7 @@ async def create_dosya(
     esas_no: str = Form(""),
     dava_turu: str = Form(""),
     acilis_tarihi: Optional[str] = Form(None),
+    musteri_id: Optional[str] = Form(None),
     user: dict = Depends(get_current_user),
 ):
     row = {
@@ -477,6 +478,7 @@ async def create_dosya(
         "esas_no": esas_no or None,
         "dava_turu": dava_turu or None,
         "acilis_tarihi": acilis_tarihi or None,
+        "musteri_id": musteri_id or None,
     }
     dosya = await db.insert("dosyalar", row)
     return dosya
@@ -877,6 +879,184 @@ async def list_dosya_cari_hesap(dosya_id: str, user: dict = Depends(get_current_
 async def list_cari_hesap(user: dict = Depends(get_current_user)):
     rows = await db.select("cari_hesap_kayitlari", {"kullanici_id": f"eq.{user['id']}"}, order="tarih.desc")
     return {"kayitlar": rows}
+
+
+# ---------------------------------------------------------------------------
+# Musteriler (CRM)
+# ---------------------------------------------------------------------------
+@app.post("/api/musteriler")
+async def create_musteri(
+    ad_soyad: str = Form(...),
+    tc_vergi_no: str = Form(""),
+    telefon: str = Form(""),
+    eposta: str = Form(""),
+    adres: str = Form(""),
+    notlar: str = Form(""),
+    user: dict = Depends(get_current_user),
+):
+    row = {
+        "user_id": user["id"],
+        "ad_soyad": ad_soyad,
+        "tc_vergi_no": tc_vergi_no or None,
+        "telefon": telefon or None,
+        "eposta": eposta or None,
+        "adres": adres or None,
+        "notlar": notlar or None,
+    }
+    return await db.insert("musteriler", row)
+
+
+@app.get("/api/musteriler")
+async def list_musteriler(user: dict = Depends(get_current_user)):
+    rows = await db.select("musteriler", {"user_id": f"eq.{user['id']}"}, order="ad_soyad.asc")
+    return {"musteriler": rows}
+
+
+async def get_owned_musteri(musteri_id: str, user_id: str) -> dict:
+    musteri = await db.select_one("musteriler", {"id": f"eq.{musteri_id}", "user_id": f"eq.{user_id}"})
+    if not musteri:
+        raise HTTPException(404, "Müşteri bulunamadı.")
+    return musteri
+
+
+@app.get("/api/musteriler/{musteri_id}")
+async def get_musteri(musteri_id: str, user: dict = Depends(get_current_user)):
+    musteri = await get_owned_musteri(musteri_id, user["id"])
+    dosyalar = await db.select("dosyalar", {"musteri_id": f"eq.{musteri_id}"}, order="created_at.desc")
+    return {**musteri, "dosyalar": dosyalar}
+
+
+@app.patch("/api/musteriler/{musteri_id}")
+async def patch_musteri(
+    musteri_id: str,
+    ad_soyad: Optional[str] = Form(None),
+    tc_vergi_no: Optional[str] = Form(None),
+    telefon: Optional[str] = Form(None),
+    eposta: Optional[str] = Form(None),
+    adres: Optional[str] = Form(None),
+    notlar: Optional[str] = Form(None),
+    user: dict = Depends(get_current_user),
+):
+    await get_owned_musteri(musteri_id, user["id"])
+    fields = {
+        k: v
+        for k, v in {
+            "ad_soyad": ad_soyad,
+            "tc_vergi_no": tc_vergi_no,
+            "telefon": telefon,
+            "eposta": eposta,
+            "adres": adres,
+            "notlar": notlar,
+        }.items()
+        if v is not None
+    }
+    if not fields:
+        raise HTTPException(400, "Güncellenecek alan yok.")
+    rows = await db.patch("musteriler", {"id": f"eq.{musteri_id}"}, fields)
+    return rows[0]
+
+
+# ---------------------------------------------------------------------------
+# Zaman Takibi (billable hours)
+# ---------------------------------------------------------------------------
+@app.post("/api/dosyalar/{dosya_id}/zaman")
+async def create_zaman_kaydi(
+    dosya_id: str,
+    tarih: str = Form(...),
+    sure_dakika: int = Form(...),
+    aciklama: str = Form(""),
+    saatlik_ucret: Optional[str] = Form(None),
+    user: dict = Depends(get_current_user),
+):
+    await get_owned_dosya(dosya_id, user["id"])
+    if sure_dakika <= 0:
+        raise HTTPException(400, "Süre 0'dan büyük olmalı.")
+    row = {
+        "dosya_id": dosya_id,
+        "tarih": tarih,
+        "sure_dakika": sure_dakika,
+        "aciklama": aciklama or None,
+        "saatlik_ucret": float(saatlik_ucret) if saatlik_ucret else None,
+    }
+    return await db.insert("zaman_kayitlari", row)
+
+
+@app.get("/api/dosyalar/{dosya_id}/zaman")
+async def list_zaman_kayitlari(dosya_id: str, user: dict = Depends(get_current_user)):
+    await get_owned_dosya(dosya_id, user["id"])
+    rows = await db.select("zaman_kayitlari", {"dosya_id": f"eq.{dosya_id}"}, order="tarih.desc")
+    return {"kayitlar": rows}
+
+
+# ---------------------------------------------------------------------------
+# Faturalandirma
+# ---------------------------------------------------------------------------
+async def sonraki_fatura_no(user_id: str) -> str:
+    yil = datetime.now(timezone.utc).year
+    dosyalar = await db.select("dosyalar", {"user_id": f"eq.{user_id}"})
+    dosya_ids = {d["id"] for d in dosyalar}
+    tum_faturalar = await db.select("faturalar", order="created_at.desc")
+    kullanici_faturalari = [f for f in tum_faturalar if f["dosya_id"] in dosya_ids and f["fatura_no"].startswith(f"{yil}-")]
+    sira = len(kullanici_faturalari) + 1
+    return f"{yil}-{sira:04d}"
+
+
+@app.post("/api/dosyalar/{dosya_id}/fatura")
+async def create_fatura(
+    dosya_id: str,
+    tutar: float = Form(...),
+    aciklama: str = Form(""),
+    user: dict = Depends(get_current_user),
+):
+    await get_owned_dosya(dosya_id, user["id"])
+    if tutar <= 0:
+        raise HTTPException(400, "Tutar 0'dan büyük olmalı.")
+    fatura_no = await sonraki_fatura_no(user["id"])
+    row = {"dosya_id": dosya_id, "fatura_no": fatura_no, "tutar": tutar, "aciklama": aciklama or None}
+    return await db.insert("faturalar", row)
+
+
+@app.get("/api/dosyalar/{dosya_id}/faturalar")
+async def list_faturalar(dosya_id: str, user: dict = Depends(get_current_user)):
+    await get_owned_dosya(dosya_id, user["id"])
+    rows = await db.select("faturalar", {"dosya_id": f"eq.{dosya_id}"}, order="tarih.desc")
+    return {"faturalar": rows}
+
+
+@app.get("/api/faturalar/{fatura_id}/pdf")
+async def fatura_pdf(fatura_id: str, user: dict = Depends(get_current_user)):
+    fatura = await db.select_one("faturalar", {"id": f"eq.{fatura_id}"})
+    if not fatura:
+        raise HTTPException(404, "Fatura bulunamadı.")
+    dosya = await get_owned_dosya(fatura["dosya_id"], user["id"])
+    musteri = await db.select_one("musteriler", {"id": f"eq.{dosya['musteri_id']}"}) if dosya.get("musteri_id") else None
+
+    musteri_adi = musteri["ad_soyad"] if musteri else dosya["muvekkil_adi"]
+    musteri_detay = ""
+    if musteri:
+        if musteri.get("tc_vergi_no"):
+            musteri_detay += f"TC/Vergi No: {musteri['tc_vergi_no']}\n"
+        if musteri.get("adres"):
+            musteri_detay += f"Adres: {musteri['adres']}\n"
+
+    metin = f"""Fatura No: {fatura['fatura_no']}
+Tarih: {fatura['tarih']}
+
+Müvekkil: {musteri_adi}
+{musteri_detay}
+Dosya: {dosya['muvekkil_adi']}{" vs. " + dosya['karsi_taraf'] if dosya.get('karsi_taraf') else ""}
+Esas No: {dosya.get('esas_no') or '-'}
+
+Açıklama: {fatura.get('aciklama') or '-'}
+
+Tutar: {fatura['tutar']:.2f} TL"""
+
+    pdf_bytes = generate_pdf_bytes(f"Fatura {fatura['fatura_no']}", metin)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="fatura-{fatura["fatura_no"]}.pdf"'},
+    )
 
 
 @app.post("/api/icra")

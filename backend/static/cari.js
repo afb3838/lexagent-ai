@@ -120,6 +120,147 @@ async function submitCariHesapKaydi() {
 }
 
 // ---------------------------------------------------------------------------
+// Zaman Takibi (billable hours)
+// ---------------------------------------------------------------------------
+let dosyaZamanKayitlari = [];
+
+async function loadDosyaZaman(dosyaId) {
+  try {
+    dosyaZamanKayitlari = await api.listZamanKayitlari(dosyaId);
+  } catch (err) {
+    dosyaZamanKayitlari = [];
+  }
+  renderZamanList();
+}
+
+function renderZamanList() {
+  const box = document.getElementById("zaman-list");
+  const toplamDakika = dosyaZamanKayitlari.reduce((s, k) => s + (k.sure_dakika || 0), 0);
+  document.getElementById("zaman-toplam").textContent = `Toplam: ${Math.floor(toplamDakika / 60)} sa ${toplamDakika % 60} dk`;
+  box.innerHTML = dosyaZamanKayitlari.length
+    ? dosyaZamanKayitlari
+        .map((k) => {
+          const saat = Math.floor(k.sure_dakika / 60);
+          const dk = k.sure_dakika % 60;
+          return `<div class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-xs">
+            <span>${formatTarihTR(k.tarih)} · ${saat} sa ${dk} dk${k.aciklama ? " · " + escapeHtml(k.aciklama) : ""}</span>
+            ${k.saatlik_ucret ? `<span class="font-semibold text-slate-700">${formatTL((k.sure_dakika / 60) * k.saatlik_ucret)}</span>` : ""}
+          </div>`;
+        })
+        .join("")
+    : '<p class="text-sm text-slate-400">Henüz zaman kaydı yok.</p>';
+}
+
+function toggleZamanForm() {
+  const form = document.getElementById("zaman-form");
+  form.classList.toggle("hidden");
+  if (!form.classList.contains("hidden")) {
+    document.getElementById("zaman-tarih").value = todayStr();
+    document.getElementById("zaman-saat").value = "";
+    document.getElementById("zaman-dakika").value = "";
+    document.getElementById("zaman-ucret").value = "";
+    document.getElementById("zaman-aciklama").value = "";
+  }
+}
+
+let zamanGonderiliyor = false;
+
+async function submitZamanKaydi() {
+  if (zamanGonderiliyor) return;
+  const tarih = document.getElementById("zaman-tarih").value;
+  const saat = parseInt(document.getElementById("zaman-saat").value, 10) || 0;
+  const dakika = parseInt(document.getElementById("zaman-dakika").value, 10) || 0;
+  const sureDakika = saat * 60 + dakika;
+  if (!tarih || sureDakika <= 0) {
+    showToast("Tarih ve süre (0'dan büyük) zorunlu.");
+    return;
+  }
+  zamanGonderiliyor = true;
+  try {
+    await api.createZamanKaydi(currentDosyaId, {
+      tarih,
+      sure_dakika: sureDakika,
+      aciklama: document.getElementById("zaman-aciklama").value,
+      saatlik_ucret: document.getElementById("zaman-ucret").value,
+    });
+    document.getElementById("zaman-form").classList.add("hidden");
+    showToast("Zaman kaydı eklendi.");
+    await loadDosyaZaman(currentDosyaId);
+  } catch (err) {
+    showToast("Eklenemedi: " + err.message);
+  } finally {
+    zamanGonderiliyor = false;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Faturalandirma
+// ---------------------------------------------------------------------------
+async function loadDosyaFaturalar(dosyaId) {
+  const box = document.getElementById("fatura-list");
+  try {
+    const faturalar = await api.listFaturalar(dosyaId);
+    box.innerHTML = faturalar.length
+      ? faturalar
+          .map(
+            (f) => `<div class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-xs">
+              <span><i class="fa-solid fa-file-invoice text-indigo-600 mr-1"></i>${f.fatura_no} · ${formatTarihTR(f.tarih)}</span>
+              <span class="flex items-center gap-2">
+                <span class="font-semibold text-slate-700">${formatTL(f.tutar)}</span>
+                <button onclick="indirFaturaPdf('${f.id}','${f.fatura_no}')" class="text-slate-400 hover:text-indigo-600" title="PDF indir"><i class="fa-solid fa-download"></i></button>
+              </span>
+            </div>`
+          )
+          .join("")
+      : '<p class="text-sm text-slate-400">Henüz fatura yok.</p>';
+  } catch (err) {
+    box.innerHTML = '<p class="text-sm text-rose-500">Yüklenemedi: ' + escapeHtml(err.message) + "</p>";
+  }
+}
+
+function toggleFaturaForm() {
+  const form = document.getElementById("fatura-form");
+  form.classList.toggle("hidden");
+  if (!form.classList.contains("hidden")) {
+    document.getElementById("fatura-tutar").value = "";
+    document.getElementById("fatura-aciklama").value = "";
+  }
+}
+
+let faturaGonderiliyor = false;
+
+async function submitFatura() {
+  if (faturaGonderiliyor) return;
+  const tutar = document.getElementById("fatura-tutar").value;
+  if (!tutar || Number(tutar) <= 0) {
+    showToast("Geçerli bir tutar girin.");
+    return;
+  }
+  faturaGonderiliyor = true;
+  try {
+    await api.createFatura(currentDosyaId, {
+      tutar,
+      aciklama: document.getElementById("fatura-aciklama").value,
+    });
+    document.getElementById("fatura-form").classList.add("hidden");
+    showToast("Fatura oluşturuldu.");
+    await loadDosyaFaturalar(currentDosyaId);
+  } catch (err) {
+    showToast("Oluşturulamadı: " + err.message);
+  } finally {
+    faturaGonderiliyor = false;
+  }
+}
+
+async function indirFaturaPdf(faturaId, faturaNo) {
+  try {
+    await api.faturaPdfIndir(faturaId, faturaNo);
+  } catch (err) {
+    showToast("İndirilemedi: " + err.message);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // AAUT ucret hesaplayici — Avukatlik Asgari Ucret Tarifesi (Resmi Gazete Sayi
 // 33067, 4 Kasim 2025, Turkiye Barolar Birligi). Tablo 1 (konusu para olmayan
 // islerde mahkemeye gore maktu ucret) ve Tablo 2 (konusu para olan islerde
