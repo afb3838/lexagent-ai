@@ -757,17 +757,22 @@ async def extract_vekaletname_fields(data: bytes, filename: str, content_type: s
         except Exception:
             extracted_text = ""
 
+    # HTTPException (Gemini servisi gecici olarak kullanilamiyor/kota vb.) burada
+    # YUTULMAZ - cagiran endpoint'e aynen yansir, boylece kullaniciya "belge
+    # okunamadi" gibi yanlis bir mesaj yerine gercek nedeni ("su anda gecici
+    # olarak kullanilamiyor") gosterilir. Sadece JSON ayristirma/format
+    # hatalari (gercekten "bu belgeden alan cikaramadim" durumu) yutulur.
+    if len(extracted_text.strip()) >= 50:
+        raw, _ = await call_gemini(VEKALETNAME_EXTRACTION_SYSTEM, extracted_text[:15000], use_search=False)
+    else:
+        mime = content_type or ("application/pdf" if name_lower.endswith(".pdf") else "image/jpeg")
+        raw = await call_gemini_vision(
+            VEKALETNAME_EXTRACTION_SYSTEM,
+            "Bu vekaletname belgesini incele ve istenen alanlari JSON olarak dondur.",
+            data,
+            mime,
+        )
     try:
-        if len(extracted_text.strip()) >= 50:
-            raw, _ = await call_gemini(VEKALETNAME_EXTRACTION_SYSTEM, extracted_text[:15000], use_search=False)
-        else:
-            mime = content_type or ("application/pdf" if name_lower.endswith(".pdf") else "image/jpeg")
-            raw = await call_gemini_vision(
-                VEKALETNAME_EXTRACTION_SYSTEM,
-                "Bu vekaletname belgesini incele ve istenen alanlari JSON olarak dondur.",
-                data,
-                mime,
-            )
         cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw.strip())
         return json.loads(cleaned)
     except Exception:
