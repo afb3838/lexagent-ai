@@ -25,6 +25,8 @@ const PAGE_TITLES = {
   "icra-takip": "İcra Takip",
   mevzuat: "Mevzuat",
   "hesaplama-araclari": "Hesaplama Araçları",
+  sablonlar: "Hazır Şablonlar",
+  barolar: "Barolar Rehberi",
 };
 
 const PLAN_LABELS_JS = {
@@ -290,6 +292,17 @@ async function router() {
     ["sure-sonuc", "etebligat-sonuc", "faiz-sonuc", "icra-sonuc", "arab-sonuc"].forEach((id) =>
       document.getElementById(id).classList.add("hidden")
     );
+    toggleIcraAlanlari();
+  } else if (route === "sablonlar" && param) {
+    showPage("page-sablon-detay");
+    openSablonPage(param);
+  } else if (route === "sablonlar") {
+    showPage("page-sablonlar");
+    loadSablonlarPage();
+  } else if (route === "barolar") {
+    showPage("page-barolar");
+    document.getElementById("baro-filtre").value = "";
+    filtreleBaroListesi();
   } else {
     location.hash = "#/dosyalar";
   }
@@ -601,6 +614,17 @@ async function handleBelgeUpload(e) {
 
 // ---------------------------------------------------------------------------
 // Boot
+// ---------------------------------------------------------------------------
+// Barolar Rehberi: il listesini filtrele
+// ---------------------------------------------------------------------------
+function filtreleBaroListesi() {
+  const q = document.getElementById("baro-filtre").value.trim().toLocaleLowerCase("tr");
+  document.querySelectorAll("#baro-grid a").forEach((el) => {
+    const ad = el.textContent.trim().toLocaleLowerCase("tr");
+    el.classList.toggle("hidden", q.length > 0 && !ad.includes(q));
+  });
+}
+
 // ---------------------------------------------------------------------------
 fetch("/api/health")
   .then((r) => r.json())

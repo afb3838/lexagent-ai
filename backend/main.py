@@ -75,13 +75,40 @@ def extract_udf_text(data: bytes) -> str:
     return "\n".join(text_parts)
 
 
-def extract_text_for(filename: str, data: bytes) -> str:
+def extract_docx_text(data: bytes) -> str:
+    """DOCX (Word) dosyalari da PDF/UDF gibi bir ZIP arsividir; ayri bir
+    python-docx bagimliligi eklemeden word/document.xml icindeki metin
+    calismalarini duz metne cevirir."""
+    try:
+        with zipfile.ZipFile(io.BytesIO(data)) as z:
+            xml = z.read("word/document.xml").decode("utf-8", errors="ignore")
+    except (zipfile.BadZipFile, KeyError):
+        raise ValueError("Gecerli bir DOCX dosyasi degil")
+    xml = re.sub(r"</w:p>", "\n", xml)
+    xml = re.sub(r"<[^>]+>", "", xml)
+    return xml.strip()
+
+
+BELGE_OKUMA_SYSTEM = (
+    "Sen bir belge tarama asistanisin. Sana verilen goruntudeki tum metni, "
+    "yorum eklemeden, bicimlendirme yapmadan oldugu gibi duz metin olarak yaz."
+)
+
+IMAGE_MIME_BY_EXT = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
+
+
+async def extract_text_for(filename: str, data: bytes) -> str:
     name_lower = (filename or "").lower()
     if name_lower.endswith(".pdf"):
         return extract_pdf_text(data)
     if name_lower.endswith(".udf"):
         return extract_udf_text(data)
-    raise ValueError("Desteklenmeyen dosya turu")
+    if name_lower.endswith(".docx"):
+        return extract_docx_text(data)
+    for ext, mime in IMAGE_MIME_BY_EXT.items():
+        if name_lower.endswith(ext):
+            return await call_gemini_vision(BELGE_OKUMA_SYSTEM, "Bu goruntudeki tum metni oldugu gibi yaz.", data, mime)
+    raise ValueError("Desteklenmeyen dosya turu (desteklenenler: PDF, UDF, DOCX, JPG, PNG, WEBP)")
 
 
 def generate_pdf_bytes(baslik: str, metin: str) -> bytes:
@@ -104,7 +131,7 @@ async def parse_files(files: List[UploadFile] = File(...), user: dict = Depends(
     for f in files:
         data = await f.read()
         try:
-            text = extract_text_for(f.filename, data)
+            text = await extract_text_for(f.filename, data)
             results.append({"name": f.filename, "text": text.strip()})
         except Exception as e:
             results.append({"name": f.filename, "text": "", "error": str(e)})
@@ -541,7 +568,7 @@ async def upload_belge(
     for f in files:
         data = await f.read()
         try:
-            metin = extract_text_for(f.filename, data)
+            metin = await extract_text_for(f.filename, data)
         except Exception as e:
             created.append({"name": f.filename, "error": str(e)})
             continue
@@ -1157,11 +1184,11 @@ async def create_icra_adim(
 async def convert_file_to_pdf(file: UploadFile = File(...), user: dict = Depends(get_current_user)):
     data = await file.read()
     try:
-        metin = extract_text_for(file.filename, data)
+        metin = await extract_text_for(file.filename, data)
     except Exception as e:
         raise HTTPException(400, str(e))
     pdf_bytes = generate_pdf_bytes(file.filename, metin)
-    filename = re.sub(r"\.(pdf|udf)$", "", file.filename, flags=re.IGNORECASE) + ".pdf"
+    filename = re.sub(r"\.(pdf|udf|docx|jpe?g|png|webp)$", "", file.filename, flags=re.IGNORECASE) + ".pdf"
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",

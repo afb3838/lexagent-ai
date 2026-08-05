@@ -285,6 +285,12 @@
       <a href="#/hesaplama-araclari" data-route="hesaplama-araclari" class="nav-link flex items-center px-3 py-2 rounded-lg">
         <i class="fa-solid fa-calculator w-5"></i><span class="ml-2">Hesaplama Araçları</span>
       </a>
+      <a href="#/sablonlar" data-route="sablonlar" class="nav-link flex items-center px-3 py-2 rounded-lg">
+        <i class="fa-solid fa-file-lines w-5"></i><span class="ml-2">Hazır Şablonlar</span>
+      </a>
+      <a href="#/barolar" data-route="barolar" class="nav-link flex items-center px-3 py-2 rounded-lg">
+        <i class="fa-solid fa-landmark w-5"></i><span class="ml-2">Barolar Rehberi</span>
+      </a>
     </nav>
     <div class="p-3 border-t border-slate-800 space-y-2">
       <div id="plan-badge" onclick="openPlanModal('profesyonel')" class="hidden text-xs px-2.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-between cursor-pointer">
@@ -458,9 +464,9 @@
           <h3 class="font-bold">Belgeler</h3>
           <div id="belge-drop-zone" onclick="document.getElementById('belgeFileInput').click()"
                class="border-2 border-dashed border-indigo-200 bg-indigo-50/30 rounded-xl p-6 text-center hover:border-indigo-500 cursor-pointer">
-            <input type="file" id="belgeFileInput" accept=".pdf,.udf" multiple class="hidden" onchange="handleBelgeUpload(event)">
+            <input type="file" id="belgeFileInput" accept=".pdf,.udf,.docx,.jpg,.jpeg,.png,.webp" multiple class="hidden" onchange="handleBelgeUpload(event)">
             <i class="fa-solid fa-cloud-arrow-up text-2xl text-indigo-600 mb-2"></i>
-            <p class="text-sm font-semibold">Belge yüklemek için tıklayın (.pdf, .udf)</p>
+            <p class="text-sm font-semibold">Belge yüklemek için tıklayın (.pdf, .udf, .docx, .jpg, .png)</p>
           </div>
           <div id="belge-upload-progress" class="space-y-2"></div>
           <div id="belge-list" class="space-y-2"></div>
@@ -875,6 +881,19 @@
 
       <!-- PAGE: Hesaplama Araclari -->
       <div id="page-hesaplama" class="page hidden space-y-6">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+          <h3 class="font-bold"><i class="fa-solid fa-file-export text-indigo-600 mr-1.5"></i>Dosya Formatı Dönüştürücü</h3>
+          <p class="text-xs text-slate-500">PDF, UDF (UYAP), DOCX (Word), JPG veya PNG formatındaki bir belgeyi seçin; içeriği metne çevrilip düzenli bir PDF olarak indirilir. Taranmış görsellerde metin, yapay zeka ile okunur (OCR).</p>
+          <div id="donusturucu-drop-zone" onclick="document.getElementById('donusturucuFileInput').click()"
+               class="border-2 border-dashed border-indigo-200 bg-indigo-50/30 rounded-xl p-6 text-center hover:border-indigo-500 cursor-pointer">
+            <input type="file" id="donusturucuFileInput" accept=".pdf,.udf,.docx,.jpg,.jpeg,.png,.webp" class="hidden" onchange="handleDonusturucuSecim(event)">
+            <i class="fa-solid fa-file-arrow-up text-2xl text-indigo-600 mb-2"></i>
+            <p class="text-sm font-semibold">Dönüştürmek için bir dosya seçin</p>
+            <p class="text-xs text-slate-500">.pdf, .udf, .docx, .jpg, .png</p>
+          </div>
+          <div id="donusturucu-durum" class="hidden text-sm"></div>
+        </div>
+
         <div class="grid lg:grid-cols-2 gap-6">
 
           <!-- Hukuki Sure Hesaplama -->
@@ -957,7 +976,7 @@
           <!-- Icra Masrafi Hesaplama -->
           <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
             <h3 class="font-bold"><i class="fa-solid fa-gavel text-indigo-600 mr-1.5"></i>İcra Masrafı Hesaplama</h3>
-            <p class="text-xs text-slate-500">Harç kalemlerinin yapısı sabittir; oranlar (binde/yüzde) her yıl değişebildiğinden sistem bunları uydurmaz — güncel oranı arayıp aşağıdaki alanlara siz girin.</p>
+            <p class="text-xs text-slate-500">Harç oranları 2026 yılı (1) sayılı tarife esas alınarak otomatik doldurulmuştur. Başvurma harcı gibi maktu tutarlar her yıl yeniden değerleme oranıyla değiştiğinden, yeni yıla girildiğinde "Güncel Oranları Bul" ile teyit edin; oran alanlarını da isterseniz elle değiştirebilirsiniz.</p>
             <div class="grid sm:grid-cols-2 gap-3">
               <div>
                 <label class="block text-xs font-semibold mb-1">Alacak Tutarı (TL)</label>
@@ -965,26 +984,33 @@
               </div>
               <div>
                 <label class="block text-xs font-semibold mb-1">Dosya Türü</label>
-                <select id="icra-tur" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                <select id="icra-tur" onchange="toggleIcraAlanlari()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm">
                   <option value="ilamsiz" selected>İlamsız Takip</option>
                   <option value="ilamli">İlamlı Takip</option>
                 </select>
               </div>
               <div>
                 <label class="block text-xs font-semibold mb-1">Başvurma Harcı (TL, maktu)</label>
-                <input id="icra-basvurma" type="number" min="0" step="0.01" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm" placeholder="Güncel tutarı girin">
+                <input id="icra-basvurma" type="number" min="0" step="0.01" value="732" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm">
               </div>
-              <div>
+              <div id="icra-pesin-alani">
                 <label class="block text-xs font-semibold mb-1">Peşin Harç Oranı (‰)</label>
-                <input id="icra-pesin-oran" type="number" min="0" step="0.01" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm" placeholder="Sadece ilamsızda">
+                <input id="icra-pesin-oran" type="number" min="0" step="0.01" value="5" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm">
               </div>
               <div>
-                <label class="block text-xs font-semibold mb-1">Tahsil Harcı Oranı (%)</label>
-                <input id="icra-tahsil-oran" type="number" min="0" step="0.01" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm" placeholder="Ödeme aşamasına göre değişir">
+                <label class="block text-xs font-semibold mb-1">Tahsil Harcı — Ödeme Aşaması</label>
+                <select id="icra-tahsil-asama" onchange="icraTahsilAsamaDegisti()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                  <option value="4.55" selected>Ödeme emri tebliği sonrası, haciz öncesi (%4,55)</option>
+                  <option value="9.10">Haciz sonrası, satıştan önce (%9,10)</option>
+                  <option value="11.38">Haczedilen/rehinli malın satışıyla (%11,38)</option>
+                  <option value="2.27">İİK 125/3 — takipsiz alacaklıya ödeme (%2,27)</option>
+                  <option value="custom">Elle gir…</option>
+                </select>
+                <input id="icra-tahsil-oran" type="number" min="0" step="0.01" value="4.55" class="hidden mt-2 w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm" placeholder="Tahsil harcı oranı (%)">
               </div>
               <div>
                 <label class="block text-xs font-semibold mb-1">Vekalet (İcra Takip) Ücreti (TL)</label>
-                <input id="icra-vekalet" type="number" min="0" step="0.01" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm" placeholder="AAÜT'ye göre">
+                <input id="icra-vekalet" type="number" min="0" step="0.01" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm" placeholder="Anlaşılan ücret veya AAÜT hesaplayıcısından">
               </div>
             </div>
             <div class="flex gap-2">
@@ -1045,6 +1071,145 @@
         </div>
       </div>
 
+      <div id="page-barolar" class="page hidden space-y-6">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+          <h3 class="font-bold"><i class="fa-solid fa-landmark text-indigo-600 mr-1.5"></i>Barolar Rehberi ve Levha Sorgulama</h3>
+          <p class="text-xs text-slate-500">Baro iletişim bilgileri zaman içinde değişebildiğinden burada tahmini/sabit bir telefon-adres listesi tutulmaz; aşağıdaki resmi bağlantılar güncel ve doğrulanmış bilgiye yönlendirir.</p>
+          <div class="grid sm:grid-cols-2 gap-3">
+            <a href="https://www.barobirlik.org.tr/AvukatArama/" target="_blank" rel="noopener" class="flex items-center justify-between bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 hover:bg-indigo-100">
+              <span class="text-sm font-semibold text-indigo-900"><i class="fa-solid fa-user-check mr-2"></i>Levha Sorgulama / Avukat Ara (TBB)</span>
+              <i class="fa-solid fa-arrow-up-right-from-square text-indigo-400 text-xs"></i>
+            </a>
+            <a href="https://www.barobirlik.org.tr/barolar" target="_blank" rel="noopener" class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 hover:bg-slate-100">
+              <span class="text-sm font-semibold text-slate-800"><i class="fa-solid fa-address-book mr-2"></i>Tüm Baroların Resmi İletişim Bilgileri (TBB)</span>
+              <i class="fa-solid fa-arrow-up-right-from-square text-slate-400 text-xs"></i>
+            </a>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold">81 İl Barosu</h3>
+            <input id="baro-filtre" oninput="filtreleBaroListesi()" type="text" placeholder="İl ara..." class="bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-sm w-48">
+          </div>
+          <div id="baro-grid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            <a href="https://www.google.com/search?q=Adana%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Adana Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Ad%C4%B1yaman%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Adıyaman Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Afyonkarahisar%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Afyonkarahisar Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=A%C4%9Fr%C4%B1%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Ağrı Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Aksaray%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Aksaray Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Amasya%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Amasya Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Ankara%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Ankara Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Antalya%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Antalya Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Ardahan%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Ardahan Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Artvin%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Artvin Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Ayd%C4%B1n%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Aydın Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Bal%C4%B1kesir%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Balıkesir Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Bart%C4%B1n%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Bartın Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Batman%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Batman Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Bayburt%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Bayburt Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Bilecik%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Bilecik Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Bing%C3%B6l%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Bingöl Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Bitlis%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Bitlis Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Bolu%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Bolu Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Burdur%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Burdur Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Bursa%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Bursa Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=%C3%87anakkale%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Çanakkale Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=%C3%87ank%C4%B1r%C4%B1%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Çankırı Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=%C3%87orum%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Çorum Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Denizli%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Denizli Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Diyarbak%C4%B1r%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Diyarbakır Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=D%C3%BCzce%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Düzce Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Edirne%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Edirne Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Elaz%C4%B1%C4%9F%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Elazığ Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Erzincan%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Erzincan Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Erzurum%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Erzurum Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Eski%C5%9Fehir%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Eskişehir Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Gaziantep%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Gaziantep Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Giresun%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Giresun Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=G%C3%BCm%C3%BC%C5%9Fhane%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Gümüşhane Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Hakkari%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Hakkari Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Hatay%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Hatay Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=I%C4%9Fd%C4%B1r%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Iğdır Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Isparta%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Isparta Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=%C4%B0stanbul%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>İstanbul Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=%C4%B0zmir%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>İzmir Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Kahramanmara%C5%9F%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Kahramanmaraş Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Karab%C3%BCk%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Karabük Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Karaman%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Karaman Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Kars%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Kars Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Kastamonu%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Kastamonu Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Kayseri%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Kayseri Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Kilis%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Kilis Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=K%C4%B1r%C4%B1kkale%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Kırıkkale Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=K%C4%B1rklareli%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Kırklareli Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=K%C4%B1r%C5%9Fehir%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Kırşehir Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Kocaeli%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Kocaeli Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Konya%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Konya Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=K%C3%BCtahya%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Kütahya Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Malatya%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Malatya Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Manisa%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Manisa Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Mardin%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Mardin Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Mersin%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Mersin Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Mu%C4%9Fla%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Muğla Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Mu%C5%9F%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Muş Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Nev%C5%9Fehir%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Nevşehir Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Ni%C4%9Fde%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Niğde Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Ordu%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Ordu Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Osmaniye%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Osmaniye Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Rize%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Rize Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Sakarya%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Sakarya Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Samsun%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Samsun Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Siirt%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Siirt Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Sinop%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Sinop Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Sivas%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Sivas Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=%C5%9Eanl%C4%B1urfa%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Şanlıurfa Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=%C5%9E%C4%B1rnak%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Şırnak Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Tekirda%C4%9F%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Tekirdağ Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Tokat%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Tokat Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Trabzon%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Trabzon Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Tunceli%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Tunceli Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=U%C5%9Fak%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Uşak Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Van%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Van Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Yalova%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Yalova Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Yozgat%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Yozgat Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+                          <a href="https://www.google.com/search?q=Zonguldak%20Barosu%20ileti%C5%9Fim" target="_blank" rel="noopener" class="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2 text-sm hover:border-indigo-400 hover:bg-indigo-50/40"><span>Zonguldak Barosu</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i></a>
+          </div>
+          <p class="text-xs text-slate-400 border-t border-slate-100 pt-3">İl adına tıklamak, o baronun güncel resmi web sitesini ve iletişim bilgilerini bulmak için canlı bir arama açar (telefon/adres burada sabit olarak tutulmaz, çünkü zaman içinde değişebilir).</p>
+        </div>
+      </div>
+
+      <div id="page-sablonlar" class="page hidden space-y-6">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+          <h3 class="font-bold mb-1"><i class="fa-solid fa-file-lines text-indigo-600 mr-1.5"></i>Hazır Şablonlar</h3>
+          <p class="text-xs text-slate-500">Bu şablonlar, standart Türk hukuk uygulamasındaki dilekçe/sözleşme yapısı esas alınarak özgün olarak hazırlanmıştır. Her olayın kendi özellikleri farklı olacağından, kullanmadan önce köşeli parantez içindeki alanları doldurup somut olaya göre gözden geçirin; resmi bir form veya hazır tebligat metni değildir.</p>
+        </div>
+        <div id="sablon-list"></div>
+      </div>
+
+      <div id="page-sablon-detay" class="page hidden space-y-6">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <a href="#/sablonlar" class="text-xs text-indigo-600 hover:underline"><i class="fa-solid fa-arrow-left mr-1"></i>Şablonlara dön</a>
+              <h3 id="sablon-detay-baslik" class="font-bold text-lg mt-1"></h3>
+              <p class="text-xs text-slate-400"><span id="sablon-detay-kategori"></span></p>
+            </div>
+            <div class="flex gap-2">
+              <button onclick="kopyalaSablon()" class="border border-slate-300 hover:border-indigo-400 text-slate-700 text-sm font-medium py-2 px-4 rounded-lg">
+                <i class="fa-solid fa-copy mr-1"></i>Kopyala
+              </button>
+              <button onclick="indirSablon()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-2 px-4 rounded-lg">
+                <i class="fa-solid fa-download mr-1"></i>İndir (.txt)
+              </button>
+            </div>
+          </div>
+          <p id="sablon-detay-aciklama" class="text-sm text-slate-600"></p>
+          <textarea id="sablon-detay-metin" class="w-full h-[32rem] bg-slate-50 border border-slate-300 rounded-lg px-4 py-3 text-sm font-mono leading-relaxed"></textarea>
+          <p class="text-xs text-slate-400 border-t border-slate-100 pt-3">Köşeli parantez içindeki [.....] alanları kendi olayınıza göre doldurun; taslak metni doğrudan doldurup indirebilir veya kopyalayıp kendi belge düzenleyicinize yapıştırabilirsiniz.</p>
+        </div>
+      </div>
+
     </main>
   </div>
 </div>
@@ -1062,14 +1227,14 @@
     <div id="standalone-upload-section" class="hidden space-y-3">
       <div>
         <label class="block text-sm font-semibold mb-1">Belgeler</label>
-        <p class="text-xs text-slate-500 mb-2">.pdf veya .udf yükleyin, "Olay Özeti" alanı otomatik doldurulsun (birden fazla seçebilirsiniz).</p>
+        <p class="text-xs text-slate-500 mb-2">.pdf, .udf, .docx, .jpg veya .png yükleyin, "Olay Özeti" alanı otomatik doldurulsun (birden fazla seçebilirsiniz).</p>
       </div>
       <div id="standalone-drop-zone" onclick="document.getElementById('standaloneFileInput').click()"
            class="border-2 border-dashed border-indigo-200 bg-indigo-50/30 rounded-xl p-6 text-center hover:border-indigo-500 cursor-pointer">
-        <input type="file" id="standaloneFileInput" accept=".pdf,.udf" multiple class="hidden" onchange="handleStandaloneUpload(event)">
+        <input type="file" id="standaloneFileInput" accept=".pdf,.udf,.docx,.jpg,.jpeg,.png,.webp" multiple class="hidden" onchange="handleStandaloneUpload(event)">
         <i class="fa-solid fa-cloud-arrow-up text-2xl text-indigo-600 mb-2"></i>
         <p class="text-sm font-semibold">Dosyaları seçmek için tıklayın</p>
-        <p class="text-xs text-slate-500">.pdf, .udf</p>
+        <p class="text-xs text-slate-500">.pdf, .udf, .docx, .jpg, .png</p>
       </div>
       <div id="standalone-upload-progress" class="space-y-2"></div>
       <div id="standalone-file-list" class="space-y-2"></div>
@@ -1256,6 +1421,7 @@
 <script src="icra.js"></script>
 <script src="mevzuat.js"></script>
 <script src="hesaplama.js"></script>
+<script src="sablonlar.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

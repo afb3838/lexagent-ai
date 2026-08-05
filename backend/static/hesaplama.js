@@ -9,6 +9,25 @@ function parseTarih(str) {
 }
 
 // ---------------------------------------------------------------------------
+// Dosya Formati Donusturucu (PDF/UDF/DOCX/JPG/PNG -> PDF)
+// ---------------------------------------------------------------------------
+async function handleDonusturucuSecim(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const durum = document.getElementById("donusturucu-durum");
+  durum.classList.remove("hidden");
+  durum.innerHTML = '<i class="fa-solid fa-spinner animate-spin mr-1"></i>Dönüştürülüyor...';
+  try {
+    await downloadFileAsPdf(file);
+    durum.innerHTML = '<span class="text-emerald-600"><i class="fa-solid fa-circle-check mr-1"></i>PDF olarak indirildi.</span>';
+  } catch (err) {
+    durum.innerHTML = '<span class="text-rose-500">Dönüştürülemedi: ' + escapeHtml(err.message) + "</span>";
+  } finally {
+    event.target.value = "";
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Hukuki Sure Hesaplama (HMK m.90-95, m.104 adli tatil uzatmasi)
 // ---------------------------------------------------------------------------
 function hesaplaHukukiSure() {
@@ -24,25 +43,54 @@ function hesaplaHukukiSure() {
   }
 
   const teblig = parseTarih(tebligStr);
-  let bitis = new Date(teblig);
-  if (birim === "gun") bitis.setDate(bitis.getDate() + miktar);
-  else if (birim === "hafta") bitis.setDate(bitis.getDate() + miktar * 7);
-  else if (birim === "ay") bitis.setMonth(bitis.getMonth() + miktar);
-  else if (birim === "yil") bitis.setFullYear(bitis.getFullYear() + miktar);
-
   const notlar = [];
+  let bitis;
 
-  if (adliTatilUzat) {
-    const yil = bitis.getFullYear();
-    const adliBaslangic = new Date(yil, 6, 20);
-    const adliBitis = new Date(yil, 7, 31, 23, 59, 59);
-    if (bitis >= adliBaslangic && bitis <= adliBitis) {
-      const yeniBitis = new Date(yil, 8, 1);
-      yeniBitis.setDate(yeniBitis.getDate() + 7);
+  if (birim === "gun" || birim === "hafta") {
+    // Gun bazli suredeki adli tatil gunleri sayilmaz (islemez); tatil bitiminden
+    // itibaren kalan gunler + HMK m.104'teki 7 gunluk ilave eklenir. Onceki
+    // implementasyon sadece "naif bitis tarihi tatile denk geliyor mu" bakiyordu,
+    // bu da suresi tatilden once kismen islemis (ornegin uzun sureli) hesaplarda
+    // yanlis (cok erken) bir bitis tarihi veriyordu.
+    const gunSayisi = birim === "hafta" ? miktar * 7 : miktar;
+    let kalan = gunSayisi;
+    let tatileGirdiMi = false;
+    let tarih = new Date(teblig);
+    while (kalan > 0) {
+      tarih.setDate(tarih.getDate() + 1);
+      const ay = tarih.getMonth(); // 0-indeksli: 6 = Temmuz, 7 = Agustos
+      const gunNo = tarih.getDate();
+      const adliTatilde = adliTatilUzat && ((ay === 6 && gunNo >= 20) || ay === 7);
+      if (adliTatilde) {
+        tatileGirdiMi = true;
+      } else {
+        kalan--;
+      }
+    }
+    if (tatileGirdiMi) {
+      tarih.setDate(tarih.getDate() + 7);
       notlar.push(
-        `Hesaplanan tarih adli tatile (20 Temmuz - 31 Ağustos) denk geldiği için süre, adli tatilin bittiği günden itibaren 7 gün uzatılarak ${formatTarihTR(toDateStr(yeniBitis))} tarihine ertelendi (HMK m.104).`
+        `Süre, adli tatil (20 Temmuz - 31 Ağustos) döneminde durduğu için bu dönemdeki günler sayılmadı; adli tatilin bitiminden itibaren kalan süre işletilip 7 gün ilave edilerek ${formatTarihTR(toDateStr(tarih))} tarihi bulundu (HMK m.104).`
       );
-      bitis = yeniBitis;
+    }
+    bitis = tarih;
+  } else {
+    bitis = new Date(teblig);
+    if (birim === "ay") bitis.setMonth(bitis.getMonth() + miktar);
+    else if (birim === "yil") bitis.setFullYear(bitis.getFullYear() + miktar);
+
+    if (adliTatilUzat) {
+      const yil = bitis.getFullYear();
+      const adliBaslangic = new Date(yil, 6, 20);
+      const adliBitis = new Date(yil, 7, 31, 23, 59, 59);
+      if (bitis >= adliBaslangic && bitis <= adliBitis) {
+        const yeniBitis = new Date(yil, 8, 1);
+        yeniBitis.setDate(yeniBitis.getDate() + 7);
+        notlar.push(
+          `Hesaplanan tarih adli tatile (20 Temmuz - 31 Ağustos) denk geldiği için süre, adli tatilin bittiği günden itibaren 7 gün uzatılarak ${formatTarihTR(toDateStr(yeniBitis))} tarihine ertelendi (HMK m.104).`
+        );
+        bitis = yeniBitis;
+      }
     }
   }
 
@@ -124,8 +172,31 @@ function hesaplaYasalFaiz() {
 }
 
 // ---------------------------------------------------------------------------
-// Icra Masrafi Hesaplama
+// Icra Masrafi Hesaplama (492 sayili Harclar Kanunu (1) sayili tarife, B bolumu)
+// Oranlar (binde 5 pesin harc; %4,55 / %9,10 / %11,38 / %2,27 kademeli tahsil
+// harci) kanunda sabit yuzdeler olarak belirlenmis olup yillara gore degismez;
+// yalniz basvurma harci gibi maktu TL tutarlari her yil yeniden degerleme
+// oranina gore guncellenir (burada 2026 tutari onceden dolduruldu, kullanici
+// isterse degistirebilir / "Guncel Oranlari Bul" ile teyit edebilir).
 // ---------------------------------------------------------------------------
+function toggleIcraAlanlari() {
+  const ilamsiz = document.getElementById("icra-tur").value === "ilamsiz";
+  document.getElementById("icra-pesin-alani").classList.toggle("hidden", !ilamsiz);
+}
+
+function icraTahsilAsamaDegisti() {
+  const secim = document.getElementById("icra-tahsil-asama").value;
+  const ozelInput = document.getElementById("icra-tahsil-oran");
+  if (secim === "custom") {
+    ozelInput.classList.remove("hidden");
+    ozelInput.value = "";
+    ozelInput.focus();
+  } else {
+    ozelInput.classList.add("hidden");
+    ozelInput.value = secim;
+  }
+}
+
 function hesaplaIcraMasrafi() {
   const tutar = parseFloat(document.getElementById("icra-tutar").value);
   const tur = document.getElementById("icra-tur").value;
@@ -146,8 +217,12 @@ function hesaplaIcraMasrafi() {
     pesinHarc = tutar * (pesinOran / 1000);
     kalemler.push({ ad: `Peşin harç (‰${pesinOran || 0})`, tutar: pesinHarc });
   }
-  const tahsilHarci = tutar * (tahsilOran / 100);
-  kalemler.push({ ad: `Tahsil harcı (%${tahsilOran || 0})`, tutar: tahsilHarci });
+  const tahsilHarciTam = tutar * (tahsilOran / 100);
+  const tahsilHarci = tur === "ilamsiz" ? Math.max(0, tahsilHarciTam - pesinHarc) : tahsilHarciTam;
+  kalemler.push({
+    ad: `Tahsil harcı (%${tahsilOran || 0}${tur === "ilamsiz" ? ", peşin harç mahsup edilmiş" : ""})`,
+    tutar: tahsilHarci,
+  });
   kalemler.push({ ad: "Vekalet (icra takip) ücreti", tutar: vekalet });
 
   const toplam = kalemler.reduce((s, k) => s + k.tutar, 0);
@@ -157,7 +232,7 @@ function hesaplaIcraMasrafi() {
     <ul class="text-xs text-slate-600 list-disc list-inside space-y-0.5 mb-2">
       ${kalemler.map((k) => `<li>${escapeHtml(k.ad)}: <strong>${formatTL(k.tutar)}</strong></li>`).join("")}
     </ul>
-    <p class="text-xs text-slate-400 border-t border-slate-100 pt-2">Tahsil harcı gerçekte ödemenin hangi aşamada (icra emri öncesi/sonrası, haciz sonrası) yapıldığına göre kademeli oranlarla hesaplanır; burada girdiğiniz tek oranla basitleştirilmiştir. Boş bıraktığınız oran/tutar alanları 0 kabul edilmiştir — "Güncel Oranları Bul" ile kontrol edin.</p>
+    <p class="text-xs text-slate-400 border-t border-slate-100 pt-2">Tahsil harcı oranları (492 s. Harçlar K. (1) sayılı tarife B bölümü) ödeme aşamasına göre kademelidir; ilamsız takipte başlangıçta ödenen peşin harç, tahsil harcından mahsup edilmiştir (İİK m.29). Başvurma harcı gibi maktu tutarlar yıl başında değişebilir — yeni yılda "Güncel Oranları Bul" ile teyit edin.</p>
   `;
   box.classList.remove("hidden");
 }
