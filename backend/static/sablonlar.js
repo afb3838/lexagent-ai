@@ -5,7 +5,7 @@
 // kaynaktan birebir alintilanmamistir. Somut olaya gore mutlaka gozden
 // gecirilip uyarlanmalidir; resmi bir form/tebligat degildir.
 
-const SABLONLAR = [
+const HAZIR_SABLONLAR = [
   {
     id: "konut-kira-sozlesmesi",
     kategori: "Sözleşmeler",
@@ -359,14 +359,14 @@ let currentSablonId = null;
 
 function loadSablonlarPage() {
   const box = document.getElementById("sablon-list");
-  const kategoriler = [...new Set(SABLONLAR.map((s) => s.kategori))];
+  const kategoriler = [...new Set(HAZIR_SABLONLAR.map((s) => s.kategori))];
   box.innerHTML = kategoriler
     .map(
       (kat) => `
     <div class="mb-6">
       <h4 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">${escapeHtml(kat)}</h4>
       <div class="grid sm:grid-cols-2 gap-3">
-        ${SABLONLAR.filter((s) => s.kategori === kat)
+        ${HAZIR_SABLONLAR.filter((s) => s.kategori === kat)
           .map(
             (s) => `
           <div onclick="location.hash = '#/sablonlar/${s.id}'" class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 cursor-pointer hover:border-indigo-400">
@@ -382,7 +382,7 @@ function loadSablonlarPage() {
 }
 
 function openSablonPage(id) {
-  const s = SABLONLAR.find((x) => x.id === id);
+  const s = HAZIR_SABLONLAR.find((x) => x.id === id);
   if (!s) {
     showToast("Şablon bulunamadı.");
     location.hash = "#/sablonlar";
@@ -404,7 +404,7 @@ function kopyalaSablon() {
 }
 
 function indirSablon() {
-  const s = SABLONLAR.find((x) => x.id === currentSablonId);
+  const s = HAZIR_SABLONLAR.find((x) => x.id === currentSablonId);
   const metin = document.getElementById("sablon-detay-metin").value;
   const blob = new Blob([metin], { type: "text/plain;charset=utf-8" });
   const url = URL.createObjectURL(blob);
