@@ -288,6 +288,9 @@
       <a href="#/sablonlar" data-route="sablonlar" class="nav-link flex items-center px-3 py-2 rounded-lg">
         <i class="fa-solid fa-file-lines w-5"></i><span class="ml-2">Hazır Şablonlar</span>
       </a>
+      <a href="#/zamanasimi" data-route="zamanasimi" class="nav-link flex items-center px-3 py-2 rounded-lg">
+        <i class="fa-solid fa-hourglass-end w-5"></i><span class="ml-2">Zamanaşımı Takip</span>
+      </a>
       <a href="#/barolar" data-route="barolar" class="nav-link flex items-center px-3 py-2 rounded-lg">
         <i class="fa-solid fa-landmark w-5"></i><span class="ml-2">Barolar Rehberi</span>
       </a>
@@ -1060,6 +1063,29 @@
         </div>
       </div>
 
+      <div id="page-zamanasimi" class="page hidden space-y-6">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+          <h3 class="font-bold"><i class="fa-solid fa-hourglass-end text-rose-600 mr-1.5"></i>Zamanaşımı Takip Radarı</h3>
+          <p class="text-xs text-slate-500">Alacak/dava türüne göre kanunda sabit olarak belirlenmiş zamanaşımı süresini hesaplar (TBK, TTK, 4857 s. İş Kanunu). Prosedürel süreler (temyiz, itiraz vb.) için "Hesaplama Araçları &gt; Hukuki Süre Hesaplama" aracını kullanın — zamanaşımı, alacağın kendisinin ne zaman talep edilemez hale geleceğini gösterir.</p>
+          <div class="grid sm:grid-cols-2 gap-3">
+            <div class="sm:col-span-2">
+              <label class="block text-xs font-semibold mb-1">Alacak / Dava Türü</label>
+              <select id="zamanasimi-tur" onchange="toggleZamanasimiOgrenmeAlani()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm"></select>
+            </div>
+            <div>
+              <label id="zamanasimi-baslangic-label" class="block text-xs font-semibold mb-1">Başlangıç Tarihi</label>
+              <input id="zamanasimi-baslangic" type="date" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm">
+            </div>
+            <div id="zamanasimi-ogrenme-alani" class="hidden">
+              <label class="block text-xs font-semibold mb-1">Zarar ve Failin Öğrenildiği Tarih</label>
+              <input id="zamanasimi-ogrenme" type="date" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm">
+            </div>
+          </div>
+          <button onclick="hesaplaZamanasimi()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-2.5 px-5 rounded-lg">Hesapla</button>
+          <div id="zamanasimi-sonuc" class="hidden bg-indigo-50/50 border border-indigo-100 rounded-xl p-4 text-sm"></div>
+        </div>
+      </div>
+
       <div id="page-barolar" class="page hidden space-y-6">
         <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
           <h3 class="font-bold"><i class="fa-solid fa-landmark text-indigo-600 mr-1.5"></i>Barolar Rehberi</h3>
@@ -1325,6 +1351,7 @@
 <script src="hesaplama.js"></script>
 <script src="sablonlar.js"></script>
 <script src="barolar.js"></script>
+<script src="zamanasimi.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

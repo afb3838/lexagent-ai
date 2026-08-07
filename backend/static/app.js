@@ -26,6 +26,7 @@ const PAGE_TITLES = {
   mevzuat: "Mevzuat",
   "hesaplama-araclari": "Hesaplama Araçları",
   sablonlar: "Hazır Şablonlar",
+  zamanasimi: "Zamanaşımı Takip",
   barolar: "Barolar Rehberi",
 };
 
@@ -299,6 +300,10 @@ async function router() {
   } else if (route === "sablonlar") {
     showPage("page-sablonlar");
     loadSablonlarPage();
+  } else if (route === "zamanasimi") {
+    showPage("page-zamanasimi");
+    initZamanasimiTurSelect();
+    document.getElementById("zamanasimi-sonuc").classList.add("hidden");
   } else if (route === "barolar") {
     showPage("page-barolar");
     document.getElementById("baro-filtre").value = "";
